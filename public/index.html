@@ -43,8 +43,48 @@
             margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
             background-clip: text;
-            -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+        }
+
+        .settings-container {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+        }
+
+        .settings-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.5rem 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        .settings-btn:hover {
+            background: #f1f5f9;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 1rem;
+            min-width: 250px;
+            z-index: 50;
+        }
+
+        .dropdown-content.show {
+            display: block;
         }
 
         .controls-wrapper {
@@ -291,6 +331,22 @@
         <header>
             <h1>SNMP Data Viewer</h1>
             <p style="color: var(--text-muted);">Explore your network equipment data visually</p>
+            <div class="settings-container">
+                <button id="settingsBtn" class="settings-btn">
+                    <span>Settings</span>
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
+                <div id="settingsDropdown" class="dropdown-content">
+                    <div style="padding: 0.5rem; border-radius: 8px;">
+                        <input type="checkbox" id="hideNoDesc" style="margin-right: 0.5rem; vertical-align: middle;">
+                        <label for="hideNoDesc"
+                            style="vertical-align: middle; font-size: 0.875rem; color: var(--text-main); cursor: pointer;">Hide
+                            metrics without description</label>
+                    </div>
+                </div>
+            </div>
         </header>
 
         <div class="controls-wrapper">
@@ -354,17 +410,12 @@
                             onclick="deleteSelectedMibs()">Delete</button>
                     </div>
                 </div>
-                <div style="margin-top: 1rem; padding: 0.5rem; background: #f8fafc; border-radius: 8px;">
-                    <input type="checkbox" id="hideNoDesc" style="margin-right: 0.5rem; vertical-align: middle;">
-                    <label for="hideNoDesc"
-                        style="vertical-align: middle; font-size: 0.875rem; color: var(--text-main);">Hide metrics
-                        without description</label>
-                </div>
-            </div>
-            <div id="mibList" class="mib-list">
-                <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
             </div>
         </div>
+        <div id="mibList" class="mib-list">
+            <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
+        </div>
+    </div>
     </div>
 
     <div id="errorBox" class="error-message"></div>
@@ -407,6 +458,21 @@
         let lastScanData = null;
         let abortController = null;
         const hideNoDescCheckbox = document.getElementById('hideNoDesc');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsDropdown = document.getElementById('settingsDropdown');
+
+        if (settingsBtn) {
+            settingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                settingsDropdown.classList.toggle('show');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!settingsDropdown.contains(e.target) && !settingsBtn.contains(e.target)) {
+                    settingsDropdown.classList.remove('show');
+                }
+            });
+        }
 
         hideNoDescCheckbox.addEventListener('change', () => {
             if (lastScanData) {
