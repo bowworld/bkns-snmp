@@ -1,0 +1,14 @@
+{
+  "name": "snmp-viewer",
+  "version": "1.0.0",
+  "description": "SNMP Table Viewer using net-snmp",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "net-snmp": "^3.8.2"
+  }
+}

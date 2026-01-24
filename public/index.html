@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNMP Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-weight: 600;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        input {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 250px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .tables-container {
+            display: grid;
+            gap: 2rem;
+        }
+
+        .table-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            overflow: hidden;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        th, td {
+            padding: 1rem 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: #f1f5f9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-muted);
+            display: none;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border-left-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background-color: #fef2f2;
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SNMP Data Viewer</h1>
+            <p style="color: var(--text-muted);">Explore your network equipment data visually</p>
+        </header>
+
+        <div class="controls">
+            <input type="text" id="targetIp" placeholder="Target IP (e.g., 192.168.2.1)" value="192.168.2.1">
+            <input type="text" id="rootOid" placeholder="Root OID (Optional)" value="1.3.6.1.2.1">
+            <input type="text" id="community" placeholder="Community" value="public">
+            <button id="scanBtn">Scan Device</button>
+        </div>
+
+        <div id="errorBox" class="error-message"></div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Scanning device... This may take a few seconds.</p>
+        </div>
+
+        <div id="results" class="tables-container"></div>
+    </div>
+
+    <script>
+        const scanBtn = document.getElementById('scanBtn');
+        const targetIp = document.getElementById('targetIp');
+        const rootOid = document.getElementById('rootOid');
+        const community = document.getElementById('community');
+        const resultsDiv = document.getElementById('results');
+        const loadingDiv = document.getElementById('loading');
+        const errorBox = document.getElementById('errorBox');
+
+        scanBtn.addEventListener('click', async () => {
+            const ip = targetIp.value.trim();
+            const oid = rootOid.value.trim();
+            const comm = community.value.trim();
+
+            if (!ip) {
+                showError("Please enter a target IP address.");
+                return;
+            }
+
+            setLoading(true);
+            showError(null); // Clear errors
+            resultsDiv.innerHTML = '';
+
+            try {
+                const url = `/api/snmp-walk?target=${encodeURIComponent(ip)}&oid=${encodeURIComponent(oid)}&community=${encodeURIComponent(comm)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch data');
+                }
+
+                renderTables(data.tables);
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                setLoading(false);
+            }
+        });
+
+        function setLoading(isLoading) {
+            if (isLoading) {
+                loadingDiv.style.display = 'block';
+                scanBtn.disabled = true;
+                scanBtn.textContent = 'Scanning...';
+            } else {
+                loadingDiv.style.display = 'none';
+                scanBtn.disabled = false;
+                scanBtn.textContent = 'Scan Device';
+            }
+        }
+
+        function showError(msg) {
+            if (msg) {
+                errorBox.textContent = msg;
+                errorBox.style.display = 'block';
+            } else {
+                errorBox.style.display = 'none';
+            }
+        }
+
+        function renderTables(tables) {
+            if (!tables || tables.length === 0) {
+                resultsDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No data found or no tables detected.</div>';
+                return;
+            }
+
+            tables.forEach(table => {
+                const card = document.createElement('div');
+                card.className = 'table-card';
+
+                const header = document.createElement('div');
+                header.className = 'card-header';
+                header.innerHTML = `<h2>Data Group: ${table.oid}</h2>`; 
+                // Could refine naming if we had MIB interpretation, but raw OID is safer for now.
+
+                const tableWrapper = document.createElement('div');
+                tableWrapper.className = 'table-responsive';
+                
+                const tableEl = document.createElement('table');
+                
+                // Head
+                const thead = document.createElement('thead');
+                const headRow = document.createElement('tr');
+                headRow.innerHTML = '<th>Index</th>' + table.columns.map(col => `<th>Col ${col}</th>`).join('');
+                thead.appendChild(headRow);
+                tableEl.appendChild(thead);
+
+                // Body
+                const tbody = document.createElement('tbody');
+                table.rows.forEach(row => {
+                    const tr = document.createElement('tr');
+                    let html = `<td>${row.index}</td>`;
+                    table.columns.forEach(col => {
+                        html += `<td>${row[col] || '-'}</td>`;
+                    });
+                    tr.innerHTML = html;
+                    tbody.appendChild(tr);
+                });
+                tableEl.appendChild(tbody);
+
+                tableWrapper.appendChild(tableEl);
+                card.appendChild(header);
+                card.appendChild(tableWrapper);
+                resultsDiv.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
