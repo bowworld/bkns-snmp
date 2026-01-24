@@ -158,7 +158,7 @@ app.get('/api/snmp-walk', (req, res) => {
             res.status(500).json({ error: error.toString() });
         } else {
             // Process results into tables
-            const tables = processToTables(results);
+            const tables = processToTables(results, mibManager, selectedMibs);
             res.json({ raw: results, tables: tables });
         }
         session.close();
@@ -171,7 +171,7 @@ app.get('/api/snmp-walk', (req, res) => {
  * We look for OIDs that share the same Prefix and Column but have different Indices,
  * and then group them by Index across different Columns.
  */
-function processToTables(results) {
+function processToTables(results, mibManager, selectedMibs) {
     // 1. Organize by potential "row index" (last part of OID)
     // This is a naive first pass. Better: Group by potential "Table Entry" prefix.
 
@@ -226,7 +226,7 @@ function processToTables(results) {
 
         let tableName = tableOid;
         // Check if we have a name for this table OID from MIB lookup
-        const tableMibInfo = mibManager.lookupOid(tableOid);
+        const tableMibInfo = mibManager.lookupOid(tableOid, selectedMibs);
         if (tableMibInfo) {
             tableName = `${tableMibInfo.name} (${tableOid})`;
         }
@@ -235,9 +235,8 @@ function processToTables(results) {
         const columnNames = {};
         colIds.forEach(cId => {
             // Reconstruct the full OID for the column definition (parent + colId)
-            // Wait, columns[parent] has entries. The parent IS the column OID.
             const fullColOid = `${tableOid}.${cId}`;
-            const colMibInfo = mibManager.lookupOid(fullColOid);
+            const colMibInfo = mibManager.lookupOid(fullColOid, selectedMibs);
             columnNames[cId] = colMibInfo ? colMibInfo.name : cId;
         });
 
