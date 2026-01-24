@@ -485,12 +485,38 @@
                     Interface</button>
             </div>
 
-            <div id="downloadContainer"
-                style="display: none; margin-bottom: 1.5rem; text-align: right; gap: 1rem; justify-content: flex-end;">
-                <button id="downloadTxtBtn"
-                    style="background-color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.875rem;">Download
-                    TXT</button>
-                <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download CSV</button>
+            <div id="toolbarContainer" style="margin-bottom: 1rem;">
+                <div
+                    style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 250px; max-width: 400px;">
+                        <div style="position: relative;">
+                            <span
+                                style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: #64748b; pointer-events: none; display: flex; align-items: center; justify-content: center; z-index: 10;">
+                                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </span>
+                            <input type="text" id="searchInput" placeholder="Search sections and columns..."
+                                style="width: 100%; padding-left: 40px; box-sizing: border-box;">
+                            <button id="clearSearchBtn"
+                                style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 4px; cursor: pointer; color: #64748b;">
+                                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="searchInfo" style="margin-top: 0.5rem; font-size: 0.875rem; color: #64748b;"></div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button id="downloadTxtBtn"
+                            style="background-color: #64748b; padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+                            TXT</button>
+                        <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+                            CSV</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -510,12 +536,16 @@
         const mibListDiv = document.getElementById('mibList');
         const mibUploadInput = document.getElementById('mibUploadInput');
         const deleteMibBtn = document.getElementById('deleteMibBtn');
-        const downloadContainer = document.getElementById('downloadContainer');
         const downloadTxtBtn = document.getElementById('downloadTxtBtn');
         const downloadCsvBtn = document.getElementById('downloadCsvBtn');
         const stopBtn = document.getElementById('stopBtn');
+        const toolbarContainer = document.getElementById('toolbarContainer');
+        const searchInput = document.getElementById('searchInput');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        const searchInfo = document.getElementById('searchInfo');
 
         let lastScanData = null;
+        let searchQuery = '';
         let abortController = null;
         const hideNoDescCheckbox = document.getElementById('hideNoDesc');
         const settingsBtn = document.getElementById('settingsBtn');
@@ -535,6 +565,25 @@
         }
 
         hideNoDescCheckbox.addEventListener('change', () => {
+            if (lastScanData) {
+                renderTables(lastScanData);
+            }
+        });
+
+        // Search functionality
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.trim().toLowerCase();
+            clearSearchBtn.style.display = searchQuery ? 'block' : 'none';
+            if (lastScanData) {
+                renderTables(lastScanData);
+            }
+        });
+
+        clearSearchBtn.addEventListener('click', () => {
+            searchInput.value = '';
+            searchQuery = '';
+            clearSearchBtn.style.display = 'none';
+            searchInfo.textContent = '';
             if (lastScanData) {
                 renderTables(lastScanData);
             }
@@ -672,7 +721,7 @@
             setLoading(true);
             showError(null); // Clear errors
             resultsDiv.innerHTML = '';
-            downloadContainer.style.display = 'none';
+            toolbarContainer.style.display = 'none';
             lastScanData = null;
 
             try {
@@ -705,14 +754,10 @@
                 lastScanData = data;
                 renderTables(data);
 
-                // Show download button if ANY results were returned
+                // Show toolbar (search + download) if ANY results were returned
                 console.log("Checking data for button visibility:", data);
-                if ((data.tables && data.tables.length > 0) || (data.raw && data.raw.length > 0)) {
-                    console.log("Success: showing download button");
-                    downloadContainer.style.setProperty('display', 'flex', 'important');
-                } else {
-                    console.warn("No data returned, button hidden");
-                }
+                // Always show toolbar
+                toolbarContainer.style.display = 'flex';
 
             } catch (err) {
                 if (err.name === 'AbortError') {
@@ -751,6 +796,41 @@
             const { tables, raw } = data;
             resultsDiv.innerHTML = '';
 
+            // Helper function to check if text matches search query
+            const matchesSearch = (text) => {
+                if (!searchQuery) return true;
+                return text && text.toLowerCase().includes(searchQuery);
+            };
+
+            // Helper function to check if a table matches search (by name or column names)
+            const tableMatchesSearch = (table) => {
+                if (!searchQuery) return true;
+                // Check table name
+                if (matchesSearch(table.oid)) return true;
+                // Check column names
+                if (table.columnNames) {
+                    for (const colId of table.columns) {
+                        if (matchesSearch(table.columnNames[colId])) return true;
+                    }
+                }
+                return false;
+            };
+
+            // Get columns that match search query
+            const getMatchingColumns = (table) => {
+                if (!searchQuery) return table.columns;
+                // If table name matches, return all columns
+                if (matchesSearch(table.oid)) return table.columns;
+                // Otherwise, filter to columns whose names match
+                return table.columns.filter(col => {
+                    const colName = table.columnNames && table.columnNames[col];
+                    return matchesSearch(colName);
+                });
+            };
+
+            let totalSections = 0;
+            let visibleSections = 0;
+
             // 1. Render General Information (Raw results that are not in any table column)
             // We can identify these by checking which OIDs are in tables and which are not.
             const tableOids = new Set();
@@ -779,7 +859,16 @@
                     scalarResults = scalarResults.filter(r => r.description);
                 }
 
+                // Apply search filter to scalar results
+                if (searchQuery) {
+                    scalarResults = scalarResults.filter(r =>
+                        matchesSearch(r.name) || matchesSearch(r.oid) || matchesSearch('General Information')
+                    );
+                }
+
+                totalSections++;
                 if (scalarResults.length > 0) {
+                    visibleSections++;
                     const card = document.createElement('div');
                     card.className = 'table-card';
                     card.style.marginBottom = '2rem';
@@ -816,12 +905,25 @@
                 if (!raw || raw.length === 0) {
                     resultsDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No data found.</div>';
                 }
+                // Update search info
+                if (searchQuery) {
+                    searchInfo.textContent = `Found ${visibleSections} of ${totalSections} sections`;
+                } else {
+                    searchInfo.textContent = '';
+                }
                 return;
             }
 
+            totalSections += tables.length;
+
             tables.forEach(table => {
-                // Filter columns if needed
-                let displayColumns = table.columns;
+                // Skip table if it doesn't match search
+                if (!tableMatchesSearch(table)) return;
+
+                // Get columns that match search
+                let displayColumns = getMatchingColumns(table);
+
+                // Filter columns if "hide no description" is checked
                 if (document.getElementById('hideNoDesc').checked) {
                     displayColumns = displayColumns.filter(col => {
                         const desc = table.columnDescriptions && table.columnDescriptions[col] ? table.columnDescriptions[col] : '';
@@ -831,6 +933,8 @@
 
                 // If no columns left, skip table
                 if (displayColumns.length === 0) return;
+
+                visibleSections++;
 
                 const card = document.createElement('div');
                 card.className = 'table-card';
@@ -909,6 +1013,16 @@
                 resizeObserver.observe(tableEl);
                 resizeObserver.observe(tableWrapper);
             });
+
+            // Update search info
+            if (searchQuery) {
+                searchInfo.textContent = `Found ${visibleSections} of ${totalSections} sections`;
+                if (visibleSections === 0) {
+                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No sections match your search.</div>';
+                }
+            } else {
+                searchInfo.textContent = '';
+            }
         }
 
         downloadTxtBtn.addEventListener('click', () => {
