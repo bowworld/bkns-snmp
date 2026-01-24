@@ -320,8 +320,8 @@
         }
 
         .table-card {
-            display: flex;
-            flex-direction: column;
+            /* display: block is default, flex-shrink accounts for flex parent */
+            flex-shrink: 0;
         }
 
         /* Fixed Layout Styles */
