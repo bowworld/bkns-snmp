@@ -365,6 +365,7 @@
         <div id="loading" class="loading">
             <div class="spinner"></div>
             <p>Scanning device... This may take a few seconds.</p>
+            <button id="stopBtn" style="background-color: #ef4444; margin-top: 1rem;">Stop & Reset Interface</button>
         </div>
 
         <div id="downloadContainer"
@@ -394,8 +395,18 @@
         const downloadContainer = document.getElementById('downloadContainer');
         const downloadTxtBtn = document.getElementById('downloadTxtBtn');
         const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+        const stopBtn = document.getElementById('stopBtn');
 
         let lastScanData = null;
+        let abortController = null;
+
+        // Stop button functionality
+        stopBtn.addEventListener('click', () => {
+            if (abortController) {
+                abortController.abort();
+            }
+            location.reload(); // Quick and easy way to "reset interface" as requested
+        });
 
         // Toggle v3 fields visibility
         snmpVersion.addEventListener('change', () => {
@@ -541,7 +552,10 @@
                     url += `&mibs=${encodeURIComponent(selectedMibs.join(','))}`;
                 }
 
-                const response = await fetch(url);
+                // Create new AbortController for this request
+                abortController = new AbortController();
+
+                const response = await fetch(url, { signal: abortController.signal });
                 const data = await response.json();
 
                 if (!response.ok) {
@@ -561,9 +575,14 @@
                 }
 
             } catch (err) {
-                showError(err.message);
+                if (err.name === 'AbortError') {
+                    console.log('Scan aborted by user');
+                } else {
+                    showError(err.message);
+                }
             } finally {
                 setLoading(false);
+                abortController = null;
             }
         });
 
