@@ -143,7 +143,7 @@ app.get('/api/snmp-walk', (req, res) => {
                 };
 
                 // Enrich with MIB data if available
-                const mibInfo = mibManager.lookupOid(vb.oid);
+                const mibInfo = mibManager.lookupOid(vb.oid, selectedMibs);
                 if (mibInfo) {
                     vb.name = mibInfo.name;
                     vb.description = mibInfo.description;

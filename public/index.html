@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- VERSION: 1.0.1 - ADDED DUAL SCROLLBARS -->
 <html lang="en">
 
 <head>
@@ -41,6 +42,7 @@
             font-size: 2.5rem;
             margin-bottom: 0.5rem;
             background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -261,6 +263,26 @@
             text-align: center;
             display: none;
         }
+
+        /* Dual Scrollbar Styles */
+        .top-scroll-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 12px;
+            margin-bottom: 0;
+            border-bottom: none;
+            background: #f1f5f9;
+            /* Light background for visibility */
+        }
+
+        .top-scroll-dummy {
+            height: 1px;
+        }
+
+        .table-card {
+            display: flex;
+            flex-direction: column;
+        }
     </style>
 </head>
 
@@ -279,6 +301,7 @@
                 <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
                     <select id="snmpVersion"
                         style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-size: 1rem; background: white;">
+                        <option value="">Select SNMP Version...</option>
                         <option value="1">SNMP v1</option>
                         <option value="2c">SNMP v2c</option>
                         <option value="3">SNMP v3</option>
@@ -344,6 +367,14 @@
             <p>Scanning device... This may take a few seconds.</p>
         </div>
 
+        <div id="downloadContainer"
+            style="display: none; margin-bottom: 1.5rem; text-align: right; gap: 1rem; justify-content: flex-end;">
+            <button id="downloadTxtBtn"
+                style="background-color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+                TXT</button>
+            <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download CSV</button>
+        </div>
+
         <div id="results" class="tables-container"></div>
     </div>
 
@@ -360,6 +391,11 @@
         const mibListDiv = document.getElementById('mibList');
         const mibUploadInput = document.getElementById('mibUploadInput');
         const deleteMibBtn = document.getElementById('deleteMibBtn');
+        const downloadContainer = document.getElementById('downloadContainer');
+        const downloadTxtBtn = document.getElementById('downloadTxtBtn');
+        const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+
+        let lastScanData = null;
 
         // Toggle v3 fields visibility
         snmpVersion.addEventListener('change', () => {
@@ -477,9 +513,16 @@
                 return;
             }
 
+            if (!version) {
+                showError("Please select an SNMP version protocol.");
+                return;
+            }
+
             setLoading(true);
             showError(null); // Clear errors
             resultsDiv.innerHTML = '';
+            downloadContainer.style.display = 'none';
+            lastScanData = null;
 
             try {
                 let url = `/api/snmp-walk?target=${encodeURIComponent(ip)}&oid=${encodeURIComponent(oid)}&version=${version}`;
@@ -505,7 +548,17 @@
                     throw new Error(data.error || 'Failed to fetch data');
                 }
 
+                lastScanData = data;
                 renderTables(data.tables);
+
+                // Show download button if ANY results were returned
+                console.log("Checking data for button visibility:", data);
+                if ((data.tables && data.tables.length > 0) || (data.raw && data.raw.length > 0)) {
+                    console.log("Success: showing download button");
+                    downloadContainer.style.setProperty('display', 'flex', 'important');
+                } else {
+                    console.warn("No data returned, button hidden");
+                }
 
             } catch (err) {
                 showError(err.message);
@@ -548,6 +601,15 @@
                 const header = document.createElement('div');
                 header.className = 'card-header';
                 header.innerHTML = `<h2>Data Group: ${table.oid}</h2>`;
+                card.appendChild(header);
+
+                // Top scrollbar wrapper
+                const topScrollWrapper = document.createElement('div');
+                topScrollWrapper.className = 'top-scroll-wrapper';
+                const topScrollDummy = document.createElement('div');
+                topScrollDummy.className = 'top-scroll-dummy';
+                topScrollWrapper.appendChild(topScrollDummy);
+                card.appendChild(topScrollWrapper);
 
                 const tableWrapper = document.createElement('div');
                 tableWrapper.className = 'table-responsive';
@@ -582,11 +644,139 @@
                 tableEl.appendChild(tbody);
 
                 tableWrapper.appendChild(tableEl);
-                card.appendChild(header);
                 card.appendChild(tableWrapper);
                 resultsDiv.appendChild(card);
+
+                // Sync scrollbars
+                topScrollWrapper.onscroll = function () {
+                    tableWrapper.scrollLeft = topScrollWrapper.scrollLeft;
+                };
+                tableWrapper.onscroll = function () {
+                    topScrollWrapper.scrollLeft = tableWrapper.scrollLeft;
+                };
+
+                // Resize dummy scrollbar to match table width
+                const resizeObserver = new ResizeObserver(() => {
+                    topScrollDummy.style.width = tableEl.offsetWidth + 'px';
+                    // Hide top scrollbar if table doesn't overflow
+                    if (tableWrapper.offsetWidth >= tableEl.offsetWidth) {
+                        topScrollWrapper.style.display = 'none';
+                    } else {
+                        topScrollWrapper.style.display = 'block';
+                    }
+                });
+                resizeObserver.observe(tableEl);
+                // Also observe the wrapper to handle window resizing
+                resizeObserver.observe(tableWrapper);
             });
         }
+
+        downloadTxtBtn.addEventListener('click', () => {
+            if (!lastScanData) return;
+
+            let text = `SNMP SCAN RESULTS\n`;
+            text += `Target: ${targetIp.value}\n`;
+            text += `Date: ${new Date().toLocaleString()}\n`;
+            text += `==========================================\n\n`;
+
+            if (lastScanData.tables && lastScanData.tables.length > 0) {
+                lastScanData.tables.forEach(table => {
+                    text += `DATA GROUP: ${table.oid}\n`;
+                    text += `------------------------------------------\n`;
+
+                    const colWidths = { index: 10 };
+                    table.columns.forEach(col => {
+                        const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
+                        colWidths[col] = Math.max(name.length, 15);
+                    });
+
+                    let header = `| ${'Index'.padEnd(colWidths.index)} | `;
+                    table.columns.forEach(col => {
+                        const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
+                        header += `${name.padEnd(colWidths[col])} | `;
+                    });
+                    text += header + `\n`;
+                    text += `| ${'-'.repeat(colWidths.index)} | ` + table.columns.map(col => '-'.repeat(colWidths[col])).join(' | ') + ` | \n`;
+
+                    table.rows.forEach(row => {
+                        let rowStr = `| ${String(row.index).padEnd(colWidths.index)} | `;
+                        table.columns.forEach(col => {
+                            const val = String(row[col] || '-');
+                            rowStr += `${val.padEnd(colWidths[col])} | `;
+                        });
+                        text += rowStr + `\n`;
+                    });
+                    text += `\n`;
+                });
+            } else if (lastScanData.raw && lastScanData.raw.length > 0) {
+                text += `RAW OID RESULTS\n`;
+                text += `------------------------------------------\n`;
+                lastScanData.raw.forEach(item => {
+                    const namePart = item.name ? ` (${item.name})` : '';
+                    text += `${item.oid}${namePart}: ${item.value}\n`;
+                });
+            }
+
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `snmp_scan_${targetIp.value.replace(/\./g, '_')}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        downloadCsvBtn.addEventListener('click', () => {
+            if (!lastScanData) return;
+
+            let csv = "";
+            const escape = (val) => {
+                if (val === null || val === undefined) return '""';
+                let s = String(val).replace(/"/g, '""');
+                return `"${s}"`;
+            };
+
+            if (lastScanData.tables && lastScanData.tables.length > 0) {
+                lastScanData.tables.forEach(table => {
+                    csv += escape(`DATA GROUP: ${table.oid}`) + "\n";
+
+                    // Header
+                    let headerRow = ["Index"];
+                    table.columns.forEach(col => {
+                        const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
+                        headerRow.push(name);
+                    });
+                    csv += headerRow.map(escape).join(",") + "\n";
+
+                    // Rows
+                    table.rows.forEach(row => {
+                        let dataRow = [row.index];
+                        table.columns.forEach(col => {
+                            dataRow.push(row[col] || "");
+                        });
+                        csv += dataRow.map(escape).join(",") + "\n";
+                    });
+                    csv += "\n"; // Space between tables
+                });
+            } else if (lastScanData.raw && lastScanData.raw.length > 0) {
+                csv += "OID,Name,Value\n";
+                lastScanData.raw.forEach(item => {
+                    csv += `${escape(item.oid)},${escape(item.name || "")},${escape(item.value)}\n`;
+                });
+            }
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `snmp_scan_${targetIp.value.replace(/\./g, '_')}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
     </script>
 </body>
 
