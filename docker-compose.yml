@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  snmp-viewer:
+    build: .
+    container_name: snmp-viewer
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./mibs:/usr/src/app/mibs
+    restart: unless-stopped
