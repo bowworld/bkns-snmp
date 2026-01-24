@@ -323,113 +323,172 @@
             display: flex;
             flex-direction: column;
         }
+
+        /* Fixed Layout Styles */
+        html,
+        body {
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+
+        .top-section {
+            flex: 0 0 auto;
+            z-index: 20;
+            position: relative;
+            background-color: var(--bg);
+            padding-bottom: 0.5rem;
+        }
+
+        /* Adjust margins to save space in fixed mode */
+        header {
+            margin-bottom: 1.5rem;
+        }
+
+        .controls-wrapper {
+            margin-bottom: 1rem;
+        }
+
+        .tables-container {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding-right: 0.5rem;
+            padding-bottom: 2rem;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 transparent;
+        }
+
+        .tables-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .tables-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .tables-container::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 4px;
+            border: 2px solid var(--bg);
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <header>
-            <h1>SNMP Data Viewer</h1>
-            <p style="color: var(--text-muted);">Explore your network equipment data visually</p>
-            <div class="settings-container">
-                <button id="settingsBtn" class="settings-btn">
-                    <span>Settings</span>
-                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
-                <div id="settingsDropdown" class="dropdown-content">
-                    <div style="padding: 0.5rem; border-radius: 8px;">
-                        <input type="checkbox" id="hideNoDesc" style="margin-right: 0.5rem; vertical-align: middle;">
-                        <label for="hideNoDesc"
-                            style="vertical-align: middle; font-size: 0.875rem; color: var(--text-main); cursor: pointer;">Hide
-                            metrics without description</label>
+        <div class="top-section">
+            <header>
+                <h1>SNMP Data Viewer</h1>
+                <p style="color: var(--text-muted);">Explore your network equipment data visually</p>
+                <div class="settings-container">
+                    <button id="settingsBtn" class="settings-btn">
+                        <span>Settings</span>
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div id="settingsDropdown" class="dropdown-content">
+                        <div style="padding: 0.5rem; border-radius: 8px;">
+                            <input type="checkbox" id="hideNoDesc"
+                                style="margin-right: 0.5rem; vertical-align: middle;">
+                            <label for="hideNoDesc"
+                                style="vertical-align: middle; font-size: 0.875rem; color: var(--text-main); cursor: pointer;">Hide
+                                metrics without description</label>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </header>
+            </header>
 
-        <div class="controls-wrapper">
-            <div class="controls">
-                <input type="text" id="targetIp" placeholder="Target IP (e.g., 192.168.2.1)" value="192.168.2.1">
-                <input type="text" id="rootOid" placeholder="Root OID (Optional)" value="1.3.6.1.2.1">
+            <div class="controls-wrapper">
+                <div class="controls">
+                    <input type="text" id="targetIp" placeholder="Target IP (e.g., 192.168.2.1)" value="192.168.2.1">
+                    <input type="text" id="rootOid" placeholder="Root OID (Optional)" value="1.3.6.1.2.1">
 
-                <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
-                    <select id="snmpVersion"
-                        style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-size: 1rem; background: white;">
-                        <option value="">Select SNMP Version...</option>
-                        <option value="1">SNMP v1</option>
-                        <option value="2c">SNMP v2c</option>
-                        <option value="3">SNMP v3</option>
-                    </select>
-
-                    <input type="text" id="community" placeholder="Community" value="public" style="flex: 2;">
-                </div>
-
-                <!-- SNMP v3 Fields (hidden by default) -->
-                <div id="v3Fields"
-                    style="display: none; width: 100%; gap: 1rem; flex-direction: column; background: #f1f5f9; padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
-                    <div style="display: flex; gap: 0.5rem;">
-                        <input type="text" id="v3User" placeholder="Username" value="user" style="width: 100%;">
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                        <select id="v3AuthProto"
-                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
-                            <option value="none">Auth: None</option>
-                            <option value="md5">MD5</option>
-                            <option value="sha">SHA</option>
+                    <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
+                        <select id="snmpVersion"
+                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-size: 1rem; background: white;">
+                            <option value="">Select SNMP Version...</option>
+                            <option value="1">SNMP v1</option>
+                            <option value="2c">SNMP v2c</option>
+                            <option value="3">SNMP v3</option>
                         </select>
-                        <input type="password" id="v3AuthPwd" placeholder="Auth Password"
-                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+
+                        <input type="text" id="community" placeholder="Community" value="public" style="flex: 2;">
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                        <select id="v3PrivProto"
-                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
-                            <option value="none">Priv: None</option>
-                            <option value="des">DES</option>
-                            <option value="aes">AES128</option>
-                            <option value="aes256">AES256</option>
-                        </select>
-                        <input type="password" id="v3PrivPwd" placeholder="Priv Password"
-                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+
+                    <!-- SNMP v3 Fields (hidden by default) -->
+                    <div id="v3Fields"
+                        style="display: none; width: 100%; gap: 1rem; flex-direction: column; background: #f1f5f9; padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="text" id="v3User" placeholder="Username" value="user" style="width: 100%;">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <select id="v3AuthProto"
+                                style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                                <option value="none">Auth: None</option>
+                                <option value="md5">MD5</option>
+                                <option value="sha">SHA</option>
+                            </select>
+                            <input type="password" id="v3AuthPwd" placeholder="Auth Password"
+                                style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <select id="v3PrivProto"
+                                style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                                <option value="none">Priv: None</option>
+                                <option value="des">DES</option>
+                                <option value="aes">AES128</option>
+                                <option value="aes256">AES256</option>
+                            </select>
+                            <input type="password" id="v3PrivPwd" placeholder="Priv Password"
+                                style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                        </div>
                     </div>
+
+                    <button id="scanBtn" style="width: 100%;">Scan Device</button>
                 </div>
 
-                <button id="scanBtn" style="width: 100%;">Scan Device</button>
+                <div class="mib-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3>MIB Files</h3>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <input type="file" id="mibUploadInput" style="display: none;" accept=".txt,.mib,.my">
+                            <button id="uploadMibBtn" class="btn-secondary"
+                                onclick="document.getElementById('mibUploadInput').click()">+ Upload</button>
+                            <button id="deleteMibBtn" class="btn-secondary"
+                                style="display: none; border-color: #ef4444; color: #ef4444;"
+                                onclick="deleteSelectedMibs()">Delete</button>
+                        </div>
+                    </div>
+                    <div id="mibList" class="mib-list">
+                        <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
+                    </div>
+                </div>
             </div>
 
-            <div class="mib-panel">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h3>MIB Files</h3>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <input type="file" id="mibUploadInput" style="display: none;" accept=".txt,.mib,.my">
-                        <button id="uploadMibBtn" class="btn-secondary"
-                            onclick="document.getElementById('mibUploadInput').click()">+ Upload</button>
-                        <button id="deleteMibBtn" class="btn-secondary"
-                            style="display: none; border-color: #ef4444; color: #ef4444;"
-                            onclick="deleteSelectedMibs()">Delete</button>
-                    </div>
-                </div>
-                <div id="mibList" class="mib-list">
-                    <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
-                </div>
+            <div id="errorBox" class="error-message"></div>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Scanning device... This may take a few seconds.</p>
+                <button id="stopBtn" style="background-color: #ef4444; margin-top: 1rem;">Stop & Reset
+                    Interface</button>
             </div>
-        </div>
 
-        <div id="errorBox" class="error-message"></div>
-
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Scanning device... This may take a few seconds.</p>
-            <button id="stopBtn" style="background-color: #ef4444; margin-top: 1rem;">Stop & Reset Interface</button>
-        </div>
-
-        <div id="downloadContainer"
-            style="display: none; margin-bottom: 1.5rem; text-align: right; gap: 1rem; justify-content: flex-end;">
-            <button id="downloadTxtBtn"
-                style="background-color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.875rem;">Download
-                TXT</button>
-            <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download CSV</button>
+            <div id="downloadContainer"
+                style="display: none; margin-bottom: 1.5rem; text-align: right; gap: 1rem; justify-content: flex-end;">
+                <button id="downloadTxtBtn"
+                    style="background-color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+                    TXT</button>
+                <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download CSV</button>
+            </div>
         </div>
 
         <div id="results" class="tables-container"></div>

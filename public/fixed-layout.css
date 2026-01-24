@@ -1,0 +1,54 @@
+/* CSS updates for fixed header layout */
+html, body {
+    height: 100vh;
+    overflow: hidden; /* Disable body scroll */
+}
+
+.container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.top-section {
+    flex: 0 0 auto; /* Don't grow, don't shrink */
+    z-index: 20;
+    padding-bottom: 1rem;
+    position: relative;
+    background-color: var(--bg); /* Ensure opaque background */
+}
+
+/* Adjust margins to save space */
+header {
+    margin-bottom: 1.5rem;
+}
+
+.controls-wrapper {
+    margin-bottom: 1rem;
+}
+
+.tables-container {
+    flex: 1 1 auto; /* Grow to fill space */
+    overflow-y: auto; /* Enable vertical scrolling */
+    padding-right: 0.5rem; /* Space for scrollbar */
+    padding-bottom: 2rem;
+    
+    /* Nice scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.tables-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.tables-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.tables-container::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 20px;
+}
