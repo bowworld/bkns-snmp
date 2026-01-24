@@ -563,7 +563,7 @@
                 }
 
                 lastScanData = data;
-                renderTables(data.tables);
+                renderTables(data);
 
                 // Show download button if ANY results were returned
                 console.log("Checking data for button visibility:", data);
@@ -607,9 +607,71 @@
             }
         }
 
-        function renderTables(tables) {
+        function renderTables(data) {
+            const { tables, raw } = data;
+            resultsDiv.innerHTML = '';
+
+            // 1. Render General Information (Raw results that are not in any table column)
+            // We can identify these by checking which OIDs are in tables and which are not.
+            const tableOids = new Set();
+            if (tables) {
+                tables.forEach(t => {
+                    t.rows.forEach(r => {
+                        t.columns.forEach(c => {
+                            // This is a bit complex to reconstruct full OID from table structure easily
+                            // But usually raw results are things like sysDescr, sysUpTime etc.
+                        });
+                    });
+                });
+            }
+
+            // For now, let's just show all raw results if no tables, or a "Top level fields" section
+            // A better way: show raw results that have short OIDs or are known scalars.
+
+            // Actually, let's just render what's available.
+            if (raw && raw.length > 0) {
+                const scalarResults = raw.filter(r => {
+                    // Heuristic: if it's part of a table, its OID will start with the table's entry OID
+                    return !tables.some(t => t.tableOid && r.oid.startsWith(t.tableOid + '.'));
+                });
+
+                if (scalarResults.length > 0) {
+                    const card = document.createElement('div');
+                    card.className = 'table-card';
+                    card.style.marginBottom = '2rem';
+                    card.innerHTML = `<div class="card-header"><h2>General Information</h2></div>`;
+
+                    const tableWrapper = document.createElement('div');
+                    tableWrapper.className = 'table-responsive';
+                    const tableEl = document.createElement('table');
+                    tableEl.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Name / OID</th>
+                                <th>Value</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${scalarResults.map(r => `
+                                <tr>
+                                    <td style="font-weight: 500;">${r.name || r.oid}</td>
+                                    <td>${r.value}</td>
+                                    <td style="color: var(--text-muted); font-size: 0.75rem;">${r.description || 'no description'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    `;
+                    tableWrapper.appendChild(tableEl);
+                    card.appendChild(tableWrapper);
+                    resultsDiv.appendChild(card);
+                }
+            }
+
             if (!tables || tables.length === 0) {
-                resultsDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No data found or no tables detected.</div>';
+                if (!raw || raw.length === 0) {
+                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No data found.</div>';
+                }
                 return;
             }
 
@@ -622,7 +684,6 @@
                 header.innerHTML = `<h2>Data Group: ${table.oid}</h2>`;
                 card.appendChild(header);
 
-                // Top scrollbar wrapper
                 const topScrollWrapper = document.createElement('div');
                 topScrollWrapper.className = 'top-scroll-wrapper';
                 const topScrollDummy = document.createElement('div');
@@ -635,21 +696,29 @@
 
                 const tableEl = document.createElement('table');
 
-                // Head
                 const thead = document.createElement('thead');
                 const headRow = document.createElement('tr');
 
-                // Use column names if available (from backend processToTables)
                 const colHeaders = table.columns.map(col => {
                     const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
-                    return `<th>${name}</th>`;
+                    const desc = table.columnDescriptions && table.columnDescriptions[col] ? table.columnDescriptions[col] : 'no description';
+
+                    // Limit description length in header for readability
+                    const shortDesc = desc.length > 60 ? desc.substring(0, 57) + '...' : desc;
+
+                    return `
+                        <th title="${desc.replace(/"/g, '&quot;')}" style="vertical-align: top; min-width: 150px;">
+                            <div style="font-weight: 600; margin-bottom: 0.25rem;">${name}</div>
+                            <div style="font-weight: 400; font-size: 0.75rem; color: var(--text-muted); white-space: normal; line-height: 1.2;">
+                                ${shortDesc === 'no description' ? '<span style="opacity: 0.5;">no description</span>' : shortDesc}
+                            </div>
+                        </th>`;
                 }).join('');
 
-                headRow.innerHTML = '<th>Index</th>' + colHeaders;
+                headRow.innerHTML = '<th style="vertical-align: top;">Index</th>' + colHeaders;
                 thead.appendChild(headRow);
                 tableEl.appendChild(thead);
 
-                // Body
                 const tbody = document.createElement('tbody');
                 table.rows.forEach(row => {
                     const tr = document.createElement('tr');
@@ -666,7 +735,6 @@
                 card.appendChild(tableWrapper);
                 resultsDiv.appendChild(card);
 
-                // Sync scrollbars
                 topScrollWrapper.onscroll = function () {
                     tableWrapper.scrollLeft = topScrollWrapper.scrollLeft;
                 };
@@ -674,10 +742,8 @@
                     topScrollWrapper.scrollLeft = tableWrapper.scrollLeft;
                 };
 
-                // Resize dummy scrollbar to match table width
                 const resizeObserver = new ResizeObserver(() => {
                     topScrollDummy.style.width = tableEl.offsetWidth + 'px';
-                    // Hide top scrollbar if table doesn't overflow
                     if (tableWrapper.offsetWidth >= tableEl.offsetWidth) {
                         topScrollWrapper.style.display = 'none';
                     } else {
@@ -685,7 +751,6 @@
                     }
                 });
                 resizeObserver.observe(tableEl);
-                // Also observe the wrapper to handle window resizing
                 resizeObserver.observe(tableWrapper);
             });
         }

@@ -139,7 +139,7 @@ app.get('/api/snmp-walk', (req, res) => {
             } else {
                 const vb = {
                     oid: varbinds[i].oid,
-                    value: varbinds[i].value.toString() // Potentially could interpret value type too
+                    value: varbinds[i].value.toString()
                 };
 
                 // Enrich with MIB data if available
@@ -147,6 +147,12 @@ app.get('/api/snmp-walk', (req, res) => {
                 if (mibInfo) {
                     vb.name = mibInfo.name;
                     vb.description = mibInfo.description;
+                    vb.enums = mibInfo.enums;
+
+                    // If it's an enum, map the value
+                    if (vb.enums && vb.enums[vb.value]) {
+                        vb.value = `${vb.value} (${vb.enums[vb.value]})`;
+                    }
                 }
 
                 results.push(vb);
@@ -231,13 +237,15 @@ function processToTables(results, mibManager, selectedMibs) {
             tableName = `${tableMibInfo.name} (${tableOid})`;
         }
 
-        // Build column names map
+        // Build column names and descriptions map
         const columnNames = {};
+        const columnDescriptions = {};
         colIds.forEach(cId => {
             // Reconstruct the full OID for the column definition (parent + colId)
             const fullColOid = `${tableOid}.${cId}`;
             const colMibInfo = mibManager.lookupOid(fullColOid, selectedMibs);
             columnNames[cId] = colMibInfo ? colMibInfo.name : cId;
+            columnDescriptions[cId] = colMibInfo ? colMibInfo.description : '';
         });
 
         const allIndices = new Set();
@@ -258,8 +266,10 @@ function processToTables(results, mibManager, selectedMibs) {
         if (rows.length > 0) {
             finalTables.push({
                 oid: tableName,
+                tableOid: tableOid,
                 columns: colIds,
                 columnNames: columnNames,
+                columnDescriptions: columnDescriptions,
                 rows: rows
             });
         }
