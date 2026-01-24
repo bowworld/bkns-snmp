@@ -1,7 +1,32 @@
 const express = require('express');
 const snmp = require('net-snmp');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const MibManager = require('./lib/mib-manager');
+
 const app = express();
 const port = 3000;
+
+// Set up MIB storage
+const mibsDir = path.join(__dirname, 'mibs');
+if (!fs.existsSync(mibsDir)) {
+    fs.mkdirSync(mibsDir, { recursive: true });
+}
+
+// Initialize MIB library
+const mibManager = new MibManager(mibsDir);
+
+// Configure multer
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, mibsDir)
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.originalname)
+    }
+});
+const upload = multer({ storage: storage });
 
 app.use(express.static('public'));
 app.use(express.json());
@@ -11,15 +36,99 @@ function isOid(s) {
     return /^\d+(\.\d+)*$/.test(s);
 }
 
+// API: Get available MIBs
+app.get('/api/mibs', (req, res) => {
+    try {
+        const files = mibManager.getMibFiles();
+        res.json(files);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API: Upload MIB
+app.post('/api/upload-mib', upload.single('mibFile'), (req, res) => {
+    if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+    }
+    // We could try to load/validate it here, but for now just acknowledge receipt
+    res.json({ message: 'File uploaded successfully', filename: req.file.filename });
+});
+
+// API: Delete MIBs
+app.delete('/api/mibs', (req, res) => {
+    const { files } = req.body;
+    if (!files || !Array.isArray(files)) {
+        return res.status(400).json({ error: 'Invalid files list' });
+    }
+
+    const results = { deleted: [], errors: [] };
+    files.forEach(filename => {
+        const filePath = path.join(mibsDir, filename);
+        try {
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+                results.deleted.push(filename);
+            } else {
+                results.errors.push(`${filename} not found`);
+            }
+        } catch (err) {
+            results.errors.push(`Failed to delete ${filename}: ${err.message}`);
+        }
+    });
+
+    res.json(results);
+});
+
 app.get('/api/snmp-walk', (req, res) => {
     const target = req.query.target || '192.168.2.1';
-    const community = req.query.community || 'public';
     const rootOid = req.query.oid || '1.3.6.1.2.1'; // Default IP-MIB
+    const selectedMibs = req.query.mibs ? req.query.mibs.split(',') : [];
 
-    const session = snmp.createSession(target, community);
+    // SNMP Version and Parameters
+    const versionStr = req.query.version || '1';
+    let version = snmp.Version1;
+    if (versionStr === '2c') version = snmp.Version2c;
+    // v3 is handled separately via createV3Session
 
-    const inputs = [];
-    
+    // Load selected MIBs
+    if (selectedMibs.length > 0) {
+        const loadResult = mibManager.loadMibs(selectedMibs);
+        console.log('MIB Load Result:', loadResult);
+    }
+
+    let session;
+    try {
+        if (versionStr === '3') {
+            const user = {
+                name: req.query.v3_user || 'user',
+                level: snmp.SecurityLevel.noAuthNoPriv
+            };
+
+            // Authentication settings
+            if (req.query.v3_auth_proto && req.query.v3_auth_proto !== 'none') {
+                user.authProtocol = snmp.AuthProtocols[req.query.v3_auth_proto];
+                user.authPassword = req.query.v3_auth_pwd;
+                user.level = snmp.SecurityLevel.authNoPriv;
+            }
+
+            // Privacy settings
+            if (req.query.v3_priv_proto && req.query.v3_priv_proto !== 'none') {
+                user.privProtocol = snmp.PrivProtocols[req.query.v3_priv_proto];
+                user.privPassword = req.query.v3_priv_pwd;
+                user.level = snmp.SecurityLevel.authPriv;
+            }
+
+            session = snmp.createV3Session(target, user);
+        } else {
+            const community = req.query.community || 'public';
+            session = snmp.createSession(target, community, { version: version });
+        }
+    } catch (err) {
+        console.error("Session creation error:", err);
+        return res.status(400).json({ error: "Failed to create SNMP session: " + err.message });
+    }
+
     // We will store all varbinds here
     const results = [];
 
@@ -28,10 +137,19 @@ app.get('/api/snmp-walk', (req, res) => {
             if (snmp.isVarbindError(varbinds[i])) {
                 console.error(snmp.varbindError(varbinds[i]));
             } else {
-                results.push({
+                const vb = {
                     oid: varbinds[i].oid,
-                    value: varbinds[i].value.toString()
-                });
+                    value: varbinds[i].value.toString() // Potentially could interpret value type too
+                };
+
+                // Enrich with MIB data if available
+                const mibInfo = mibManager.lookupOid(vb.oid);
+                if (mibInfo) {
+                    vb.name = mibInfo.name;
+                    vb.description = mibInfo.description;
+                }
+
+                results.push(vb);
             }
         }
     }, function (error) {
@@ -56,34 +174,36 @@ app.get('/api/snmp-walk', (req, res) => {
 function processToTables(results) {
     // 1. Organize by potential "row index" (last part of OID)
     // This is a naive first pass. Better: Group by potential "Table Entry" prefix.
-    
+
     // Algorithm:
     // Identify common prefixes. 
     // If we have 1.3.6.1.2.1.2.2.1.1.1 and 1.3.6.1.2.1.2.2.1.1.2 -> same column (1.3.6.1.2.1.2.2.1.1)
     // If we have 1.3.6.1.2.1.2.2.1.2.1 and 1.3.6.1.2.1.2.2.1.2.2 -> same column (1.3.6.1.2.1.2.2.1.2)
     // These two columns share the same parent (1.3.6.1.2.1.2.2.1) -> potential table.
-    
+
     // Step 1: Group by potential column (parent OID)
     const columns = {};
     results.forEach(r => {
         const parts = r.oid.split('.');
         const index = parts.pop(); // The last number is often the index (or part of it)
         const parent = parts.join('.');
-        
+
         if (!columns[parent]) {
             columns[parent] = [];
         }
-        columns[parent].push({ index, value: r.value, fullOid: r.oid });
+        // Store name if we have it from the first entry of this column? 
+        // Or store it with the entry.
+        columns[parent].push({ index, value: r.value, fullOid: r.oid, name: r.name });
     });
 
     // Step 2: Group columns by THEIR parent to find tables
     const potentialTables = {};
-    
+
     Object.keys(columns).forEach(colOid => {
         const parts = colOid.split('.');
         const colId = parts.pop(); // The column ID
         const tableEntryOid = parts.join('.'); // The table entry OID
-        
+
         if (!potentialTables[tableEntryOid]) {
             potentialTables[tableEntryOid] = {};
         }
@@ -97,19 +217,37 @@ function processToTables(results) {
     Object.keys(potentialTables).forEach(tableOid => {
         const cols = potentialTables[tableOid];
         const colIds = Object.keys(cols);
-        
-        // Check if it looks like a table (more than one column usually, or at least multiple rows)
-        // If it's just scalars, they might end up here if we blindly strip last digit.
-        // But for scalars, the "index" is usually 0.
-        
-        // Lets construct rows based on common indices.
+
+        // Try to find a human readable name for the table if possible
+        // Usually table entry name. 
+        // e.g. if sysDescr is 1.3.6.1.2.1.1.1, the table usually doesn't apply.
+        // If ifTable is 1.3.6.1.2.1.2.2, ifEntry is .1. 
+        // Our 'tableOid' is likely the ifEntry OID.
+
+        let tableName = tableOid;
+        // Check if we have a name for this table OID from MIB lookup
+        const tableMibInfo = mibManager.lookupOid(tableOid);
+        if (tableMibInfo) {
+            tableName = `${tableMibInfo.name} (${tableOid})`;
+        }
+
+        // Build column names map
+        const columnNames = {};
+        colIds.forEach(cId => {
+            // Reconstruct the full OID for the column definition (parent + colId)
+            // Wait, columns[parent] has entries. The parent IS the column OID.
+            const fullColOid = `${tableOid}.${cId}`;
+            const colMibInfo = mibManager.lookupOid(fullColOid);
+            columnNames[cId] = colMibInfo ? colMibInfo.name : cId;
+        });
+
         const allIndices = new Set();
         colIds.forEach(cId => {
             cols[cId].forEach(entry => allIndices.add(entry.index));
         });
 
         const rows = [];
-        Array.from(allIndices).sort((a,b) => parseInt(a) - parseInt(b)).forEach(idx => {
+        Array.from(allIndices).sort((a, b) => parseInt(a) - parseInt(b)).forEach(idx => {
             const row = { index: idx };
             colIds.forEach(cId => {
                 const entry = cols[cId].find(e => e.index === idx);
@@ -118,17 +256,13 @@ function processToTables(results) {
             rows.push(row);
         });
 
-        // Filter out things that don't look like tables (e.g. single row with index 0 might be scalar grouping)
-        // But the user WANTS tables. Even a list of scalars can be a 1-column table.
-        // Let's refine: A table usually implies multiple columns sharing indices.
-        // Or one column with multiple indices.
-        
         if (rows.length > 0) {
-           finalTables.push({
-               oid: tableOid,
-               columns: colIds,
-               rows: rows
-           });
+            finalTables.push({
+                oid: tableName,
+                columns: colIds,
+                columnNames: columnNames,
+                rows: rows
+            });
         }
     });
 

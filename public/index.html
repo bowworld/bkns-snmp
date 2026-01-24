@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -44,23 +45,64 @@
             -webkit-text-fill-color: transparent;
         }
 
+        .controls-wrapper {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
         .controls {
             display: flex;
             gap: 1rem;
-            justify-content: center;
-            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            justify-content: flex-start;
             background: var(--card-bg);
             padding: 1.5rem;
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            align-items: center;
         }
 
-        input {
+        .mib-panel {
+            background: var(--card-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .mib-panel h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .mib-list {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.5rem;
+        }
+
+        .mib-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0;
+            font-size: 0.875rem;
+        }
+
+        input[type="text"] {
             padding: 0.75rem 1rem;
             border: 1px solid var(--border);
             border-radius: 8px;
             font-size: 1rem;
-            width: 250px;
+            flex: 1;
+            min-width: 150px;
             transition: border-color 0.2s;
         }
 
@@ -81,8 +123,24 @@
             transition: transform 0.1s, background-color 0.2s;
         }
 
+        .btn-secondary {
+            background-color: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+        }
+
+        .btn-secondary:hover {
+            background-color: #eff6ff;
+        }
+
         button:hover {
             background-color: var(--primary-hover);
+        }
+
+        .btn-secondary:hover {
+            background-color: #eff6ff;
         }
 
         button:active {
@@ -109,8 +167,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .card-header {
@@ -138,7 +203,8 @@
             font-size: 0.875rem;
         }
 
-        th, td {
+        th,
+        td {
             padding: 1rem 1.5rem;
             text-align: left;
             border-bottom: 1px solid var(--border);
@@ -165,7 +231,7 @@
             color: var(--text-muted);
             display: none;
         }
-        
+
         .spinner {
             border: 4px solid rgba(0, 0, 0, 0.1);
             width: 36px;
@@ -177,8 +243,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .error-message {
@@ -192,6 +263,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -199,11 +271,70 @@
             <p style="color: var(--text-muted);">Explore your network equipment data visually</p>
         </header>
 
-        <div class="controls">
-            <input type="text" id="targetIp" placeholder="Target IP (e.g., 192.168.2.1)" value="192.168.2.1">
-            <input type="text" id="rootOid" placeholder="Root OID (Optional)" value="1.3.6.1.2.1">
-            <input type="text" id="community" placeholder="Community" value="public">
-            <button id="scanBtn">Scan Device</button>
+        <div class="controls-wrapper">
+            <div class="controls">
+                <input type="text" id="targetIp" placeholder="Target IP (e.g., 192.168.2.1)" value="192.168.2.1">
+                <input type="text" id="rootOid" placeholder="Root OID (Optional)" value="1.3.6.1.2.1">
+
+                <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
+                    <select id="snmpVersion"
+                        style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); font-size: 1rem; background: white;">
+                        <option value="1">SNMP v1</option>
+                        <option value="2c">SNMP v2c</option>
+                        <option value="3">SNMP v3</option>
+                    </select>
+
+                    <input type="text" id="community" placeholder="Community" value="public" style="flex: 2;">
+                </div>
+
+                <!-- SNMP v3 Fields (hidden by default) -->
+                <div id="v3Fields"
+                    style="display: none; width: 100%; gap: 1rem; flex-direction: column; background: #f1f5f9; padding: 1rem; border-radius: 8px; margin-top: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="text" id="v3User" placeholder="Username" value="user" style="width: 100%;">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <select id="v3AuthProto"
+                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                            <option value="none">Auth: None</option>
+                            <option value="md5">MD5</option>
+                            <option value="sha">SHA</option>
+                        </select>
+                        <input type="password" id="v3AuthPwd" placeholder="Auth Password"
+                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <select id="v3PrivProto"
+                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                            <option value="none">Priv: None</option>
+                            <option value="des">DES</option>
+                            <option value="aes">AES128</option>
+                            <option value="aes256">AES256</option>
+                        </select>
+                        <input type="password" id="v3PrivPwd" placeholder="Priv Password"
+                            style="padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border);">
+                    </div>
+                </div>
+
+                <button id="scanBtn" style="width: 100%;">Scan Device</button>
+            </div>
+
+            <div class="mib-panel">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>MIB Files</h3>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input type="file" id="mibUploadInput" style="display: none;" accept=".txt,.mib,.my">
+                        <button id="uploadMibBtn" class="btn-secondary"
+                            onclick="document.getElementById('mibUploadInput').click()">+ Upload</button>
+                        <button id="deleteMibBtn" class="btn-secondary"
+                            style="display: none; border-color: #ef4444; color: #ef4444;"
+                            onclick="deleteSelectedMibs()">Delete</button>
+                    </div>
+                </div>
+                <div id="mibList" class="mib-list">
+                    <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
+                </div>
+            </div>
         </div>
 
         <div id="errorBox" class="error-message"></div>
@@ -221,14 +352,125 @@
         const targetIp = document.getElementById('targetIp');
         const rootOid = document.getElementById('rootOid');
         const community = document.getElementById('community');
+        const snmpVersion = document.getElementById('snmpVersion');
+        const v3Fields = document.getElementById('v3Fields');
         const resultsDiv = document.getElementById('results');
         const loadingDiv = document.getElementById('loading');
         const errorBox = document.getElementById('errorBox');
+        const mibListDiv = document.getElementById('mibList');
+        const mibUploadInput = document.getElementById('mibUploadInput');
+        const deleteMibBtn = document.getElementById('deleteMibBtn');
+
+        // Toggle v3 fields visibility
+        snmpVersion.addEventListener('change', () => {
+            if (snmpVersion.value === '3') {
+                v3Fields.style.display = 'flex';
+                community.style.display = 'none';
+            } else {
+                v3Fields.style.display = 'none';
+                community.style.display = 'block';
+            }
+        });
+
+        // Load available MIBs on start
+        fetchMibs();
+
+        mibUploadInput.addEventListener('change', async (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                const formData = new FormData();
+                formData.append('mibFile', file);
+
+                try {
+                    const res = await fetch('/api/upload-mib', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (res.ok) {
+                        fetchMibs(); // Refresh list
+                    } else {
+                        const err = await res.json();
+                        alert('Upload failed: ' + err.error);
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Upload failed.');
+                }
+                // Reset input
+                e.target.value = '';
+            }
+        });
+
+        async function fetchMibs() {
+            try {
+                const res = await fetch('/api/mibs');
+                const files = await res.json();
+                renderMibList(files);
+            } catch (err) {
+                console.error("Failed to fetch MIBs", err);
+            }
+        }
+
+        function renderMibList(files) {
+            if (files.length === 0) {
+                mibListDiv.innerHTML = '<div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>';
+                deleteMibBtn.style.display = 'none';
+                return;
+            }
+
+            mibListDiv.innerHTML = '';
+            files.forEach(file => {
+                const div = document.createElement('div');
+                div.className = 'mib-item';
+                div.innerHTML = `
+                    <input type="checkbox" id="mib-${file}" value="${file}" class="mib-checkbox" onchange="updateDeleteButtonVisibility()">
+                    <label for="mib-${file}" style="cursor: pointer; overflow: hidden; text-overflow: ellipsis;">${file}</label>
+                `;
+                mibListDiv.appendChild(div);
+            });
+            updateDeleteButtonVisibility();
+        }
+
+        function updateDeleteButtonVisibility() {
+            const selected = getSelectedMibs();
+            deleteMibBtn.style.display = selected.length > 0 ? 'block' : 'none';
+        }
+
+        async function deleteSelectedMibs() {
+            const selected = getSelectedMibs();
+            if (selected.length === 0) return;
+
+            if (!confirm(`Are you sure you want to delete ${selected.length} MIB file(s)?`)) return;
+
+            try {
+                const res = await fetch('/api/mibs', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ files: selected })
+                });
+                if (res.ok) {
+                    fetchMibs(); // Refresh list
+                } else {
+                    const err = await res.json();
+                    alert('Delete failed: ' + err.error);
+                }
+            } catch (error) {
+                console.error('Delete error:', error);
+                alert('Delete failed.');
+            }
+        }
+
+        function getSelectedMibs() {
+            const checkboxes = document.querySelectorAll('.mib-checkbox:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
 
         scanBtn.addEventListener('click', async () => {
             const ip = targetIp.value.trim();
             const oid = rootOid.value.trim();
             const comm = community.value.trim();
+            const selectedMibs = getSelectedMibs();
+            const version = snmpVersion.value;
 
             if (!ip) {
                 showError("Please enter a target IP address.");
@@ -240,7 +482,22 @@
             resultsDiv.innerHTML = '';
 
             try {
-                const url = `/api/snmp-walk?target=${encodeURIComponent(ip)}&oid=${encodeURIComponent(oid)}&community=${encodeURIComponent(comm)}`;
+                let url = `/api/snmp-walk?target=${encodeURIComponent(ip)}&oid=${encodeURIComponent(oid)}&version=${version}`;
+
+                if (version === '3') {
+                    url += `&v3_user=${encodeURIComponent(document.getElementById('v3User').value)}`;
+                    url += `&v3_auth_proto=${encodeURIComponent(document.getElementById('v3AuthProto').value)}`;
+                    url += `&v3_auth_pwd=${encodeURIComponent(document.getElementById('v3AuthPwd').value)}`;
+                    url += `&v3_priv_proto=${encodeURIComponent(document.getElementById('v3PrivProto').value)}`;
+                    url += `&v3_priv_pwd=${encodeURIComponent(document.getElementById('v3PrivPwd').value)}`;
+                } else {
+                    url += `&community=${encodeURIComponent(comm)}`;
+                }
+
+                if (selectedMibs.length > 0) {
+                    url += `&mibs=${encodeURIComponent(selectedMibs.join(','))}`;
+                }
+
                 const response = await fetch(url);
                 const data = await response.json();
 
@@ -290,18 +547,24 @@
 
                 const header = document.createElement('div');
                 header.className = 'card-header';
-                header.innerHTML = `<h2>Data Group: ${table.oid}</h2>`; 
-                // Could refine naming if we had MIB interpretation, but raw OID is safer for now.
+                header.innerHTML = `<h2>Data Group: ${table.oid}</h2>`;
 
                 const tableWrapper = document.createElement('div');
                 tableWrapper.className = 'table-responsive';
-                
+
                 const tableEl = document.createElement('table');
-                
+
                 // Head
                 const thead = document.createElement('thead');
                 const headRow = document.createElement('tr');
-                headRow.innerHTML = '<th>Index</th>' + table.columns.map(col => `<th>Col ${col}</th>`).join('');
+
+                // Use column names if available (from backend processToTables)
+                const colHeaders = table.columns.map(col => {
+                    const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
+                    return `<th>${name}</th>`;
+                }).join('');
+
+                headRow.innerHTML = '<th>Index</th>' + colHeaders;
                 thead.appendChild(headRow);
                 tableEl.appendChild(thead);
 
@@ -326,4 +589,5 @@
         }
     </script>
 </body>
+
 </html>
