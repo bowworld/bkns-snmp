@@ -354,29 +354,36 @@
                             onclick="deleteSelectedMibs()">Delete</button>
                     </div>
                 </div>
-                <div id="mibList" class="mib-list">
-                    <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
+                <div style="margin-top: 1rem; padding: 0.5rem; background: #f8fafc; border-radius: 8px;">
+                    <input type="checkbox" id="hideNoDesc" style="margin-right: 0.5rem; vertical-align: middle;">
+                    <label for="hideNoDesc"
+                        style="vertical-align: middle; font-size: 0.875rem; color: var(--text-main);">Hide metrics
+                        without description</label>
                 </div>
             </div>
+            <div id="mibList" class="mib-list">
+                <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
+            </div>
         </div>
+    </div>
 
-        <div id="errorBox" class="error-message"></div>
+    <div id="errorBox" class="error-message"></div>
 
-        <div id="loading" class="loading">
-            <div class="spinner"></div>
-            <p>Scanning device... This may take a few seconds.</p>
-            <button id="stopBtn" style="background-color: #ef4444; margin-top: 1rem;">Stop & Reset Interface</button>
-        </div>
+    <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Scanning device... This may take a few seconds.</p>
+        <button id="stopBtn" style="background-color: #ef4444; margin-top: 1rem;">Stop & Reset Interface</button>
+    </div>
 
-        <div id="downloadContainer"
-            style="display: none; margin-bottom: 1.5rem; text-align: right; gap: 1rem; justify-content: flex-end;">
-            <button id="downloadTxtBtn"
-                style="background-color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.875rem;">Download
-                TXT</button>
-            <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download CSV</button>
-        </div>
+    <div id="downloadContainer"
+        style="display: none; margin-bottom: 1.5rem; text-align: right; gap: 1rem; justify-content: flex-end;">
+        <button id="downloadTxtBtn"
+            style="background-color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+            TXT</button>
+        <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download CSV</button>
+    </div>
 
-        <div id="results" class="tables-container"></div>
+    <div id="results" class="tables-container"></div>
     </div>
 
     <script>
@@ -399,6 +406,13 @@
 
         let lastScanData = null;
         let abortController = null;
+        const hideNoDescCheckbox = document.getElementById('hideNoDesc');
+
+        hideNoDescCheckbox.addEventListener('change', () => {
+            if (lastScanData) {
+                renderTables(lastScanData);
+            }
+        });
 
         // Stop button functionality
         stopBtn.addEventListener('click', () => {
@@ -630,10 +644,14 @@
 
             // Actually, let's just render what's available.
             if (raw && raw.length > 0) {
-                const scalarResults = raw.filter(r => {
+                let scalarResults = raw.filter(r => {
                     // Heuristic: if it's part of a table, its OID will start with the table's entry OID
                     return !tables.some(t => t.tableOid && r.oid.startsWith(t.tableOid + '.'));
                 });
+
+                if (document.getElementById('hideNoDesc').checked) {
+                    scalarResults = scalarResults.filter(r => r.description);
+                }
 
                 if (scalarResults.length > 0) {
                     const card = document.createElement('div');
@@ -676,6 +694,18 @@
             }
 
             tables.forEach(table => {
+                // Filter columns if needed
+                let displayColumns = table.columns;
+                if (document.getElementById('hideNoDesc').checked) {
+                    displayColumns = displayColumns.filter(col => {
+                        const desc = table.columnDescriptions && table.columnDescriptions[col] ? table.columnDescriptions[col] : '';
+                        return desc && desc.length > 0;
+                    });
+                }
+
+                // If no columns left, skip table
+                if (displayColumns.length === 0) return;
+
                 const card = document.createElement('div');
                 card.className = 'table-card';
 
@@ -699,7 +729,7 @@
                 const thead = document.createElement('thead');
                 const headRow = document.createElement('tr');
 
-                const colHeaders = table.columns.map(col => {
+                const colHeaders = displayColumns.map(col => {
                     const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
                     const desc = table.columnDescriptions && table.columnDescriptions[col] ? table.columnDescriptions[col] : 'no description';
 
@@ -723,7 +753,7 @@
                 table.rows.forEach(row => {
                     const tr = document.createElement('tr');
                     let html = `<td>${row.index}</td>`;
-                    table.columns.forEach(col => {
+                    displayColumns.forEach(col => {
                         html += `<td>${row[col] || '-'}</td>`;
                     });
                     tr.innerHTML = html;
@@ -765,26 +795,36 @@
 
             if (lastScanData.tables && lastScanData.tables.length > 0) {
                 lastScanData.tables.forEach(table => {
+                    // Filter columns logic (duplicating for download consistency)
+                    let displayColumns = table.columns;
+                    if (document.getElementById('hideNoDesc').checked) {
+                        displayColumns = displayColumns.filter(col => {
+                            const desc = table.columnDescriptions && table.columnDescriptions[col] ? table.columnDescriptions[col] : '';
+                            return desc && desc.length > 0;
+                        });
+                    }
+                    if (displayColumns.length === 0) return;
+
                     text += `DATA GROUP: ${table.oid}\n`;
                     text += `------------------------------------------\n`;
 
                     const colWidths = { index: 10 };
-                    table.columns.forEach(col => {
+                    displayColumns.forEach(col => {
                         const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
                         colWidths[col] = Math.max(name.length, 15);
                     });
 
                     let header = `| ${'Index'.padEnd(colWidths.index)} | `;
-                    table.columns.forEach(col => {
+                    displayColumns.forEach(col => {
                         const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
                         header += `${name.padEnd(colWidths[col])} | `;
                     });
                     text += header + `\n`;
-                    text += `| ${'-'.repeat(colWidths.index)} | ` + table.columns.map(col => '-'.repeat(colWidths[col])).join(' | ') + ` | \n`;
+                    text += `| ${'-'.repeat(colWidths.index)} | ` + displayColumns.map(col => '-'.repeat(colWidths[col])).join(' | ') + ` | \n`;
 
                     table.rows.forEach(row => {
                         let rowStr = `| ${String(row.index).padEnd(colWidths.index)} | `;
-                        table.columns.forEach(col => {
+                        displayColumns.forEach(col => {
                             const val = String(row[col] || '-');
                             rowStr += `${val.padEnd(colWidths[col])} | `;
                         });
@@ -795,7 +835,13 @@
             } else if (lastScanData.raw && lastScanData.raw.length > 0) {
                 text += `RAW OID RESULTS\n`;
                 text += `------------------------------------------\n`;
-                lastScanData.raw.forEach(item => {
+
+                let scalarResults = lastScanData.raw;
+                if (document.getElementById('hideNoDesc').checked) {
+                    scalarResults = scalarResults.filter(r => r.description);
+                }
+
+                scalarResults.forEach(item => {
                     const namePart = item.name ? ` (${item.name})` : '';
                     text += `${item.oid}${namePart}: ${item.value}\n`;
                 });
@@ -824,11 +870,21 @@
 
             if (lastScanData.tables && lastScanData.tables.length > 0) {
                 lastScanData.tables.forEach(table => {
+                    // Filter columns logic (duplicating for download consistency)
+                    let displayColumns = table.columns;
+                    if (document.getElementById('hideNoDesc').checked) {
+                        displayColumns = displayColumns.filter(col => {
+                            const desc = table.columnDescriptions && table.columnDescriptions[col] ? table.columnDescriptions[col] : '';
+                            return desc && desc.length > 0;
+                        });
+                    }
+                    if (displayColumns.length === 0) return;
+
                     csv += escape(`DATA GROUP: ${table.oid}`) + "\n";
 
                     // Header
                     let headerRow = ["Index"];
-                    table.columns.forEach(col => {
+                    displayColumns.forEach(col => {
                         const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
                         headerRow.push(name);
                     });
@@ -837,7 +893,7 @@
                     // Rows
                     table.rows.forEach(row => {
                         let dataRow = [row.index];
-                        table.columns.forEach(col => {
+                        displayColumns.forEach(col => {
                             dataRow.push(row[col] || "");
                         });
                         csv += dataRow.map(escape).join(",") + "\n";
@@ -845,8 +901,13 @@
                     csv += "\n"; // Space between tables
                 });
             } else if (lastScanData.raw && lastScanData.raw.length > 0) {
+                let scalarResults = lastScanData.raw;
+                if (document.getElementById('hideNoDesc').checked) {
+                    scalarResults = scalarResults.filter(r => r.description);
+                }
+
                 csv += "OID,Name,Value\n";
-                lastScanData.raw.forEach(item => {
+                scalarResults.forEach(item => {
                     csv += `${escape(item.oid)},${escape(item.name || "")},${escape(item.value)}\n`;
                 });
             }
