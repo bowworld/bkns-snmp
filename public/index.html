@@ -410,31 +410,29 @@
                             onclick="deleteSelectedMibs()">Delete</button>
                     </div>
                 </div>
+                <div id="mibList" class="mib-list">
+                    <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
+                </div>
             </div>
         </div>
-        <div id="mibList" class="mib-list">
-            <div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>
+
+        <div id="errorBox" class="error-message"></div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Scanning device... This may take a few seconds.</p>
+            <button id="stopBtn" style="background-color: #ef4444; margin-top: 1rem;">Stop & Reset Interface</button>
         </div>
-    </div>
-    </div>
 
-    <div id="errorBox" class="error-message"></div>
+        <div id="downloadContainer"
+            style="display: none; margin-bottom: 1.5rem; text-align: right; gap: 1rem; justify-content: flex-end;">
+            <button id="downloadTxtBtn"
+                style="background-color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+                TXT</button>
+            <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download CSV</button>
+        </div>
 
-    <div id="loading" class="loading">
-        <div class="spinner"></div>
-        <p>Scanning device... This may take a few seconds.</p>
-        <button id="stopBtn" style="background-color: #ef4444; margin-top: 1rem;">Stop & Reset Interface</button>
-    </div>
-
-    <div id="downloadContainer"
-        style="display: none; margin-bottom: 1.5rem; text-align: right; gap: 1rem; justify-content: flex-end;">
-        <button id="downloadTxtBtn"
-            style="background-color: var(--text-muted); padding: 0.5rem 1rem; font-size: 0.875rem;">Download
-            TXT</button>
-        <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download CSV</button>
-    </div>
-
-    <div id="results" class="tables-container"></div>
+        <div id="results" class="tables-container"></div>
     </div>
 
     <script>
