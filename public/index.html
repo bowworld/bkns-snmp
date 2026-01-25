@@ -159,7 +159,7 @@
             padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            max-width: 600px;
+            max-width: 100%;
         }
 
         .settings-group {
@@ -656,14 +656,19 @@
             <!-- Line Protocol Tab -->
             <div id="protocol-tab" class="tab-pane">
                 <div class="settings-card">
-                    <h2 data-i18n="tab_protocol">Line Protocol Settings</h2>
-                    <p style="color: var(--text-muted); margin-bottom: 2rem;">Configure how data is transformed into
-                        InfluxDB Line Protocol format.</p>
+                    <div class="settings-group"
+                        style="position: sticky; top: 0; background: var(--card-bg); z-index: 10; padding-bottom: 1rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border);">
+                        <h3 data-i18n="lp_preview" style="margin-top: 0;">Line Protocol Preview</h3>
+                        <div id="lpPreview"
+                            style="padding: 1rem; background: #1e293b; color: #f8fafc; border-radius: 8px; font-family: monospace; white-space: pre-wrap; overflow-x: auto; border: 1px solid var(--border);">
+                        </div>
+                    </div>
+
                     <div class="settings-group">
                         <h3 data-i18n="lp_measurement">Measurement</h3>
                         <div style="display: flex; gap: 0.5rem; max-width: 500px;">
                             <input type="text" id="lpMeasurement" placeholder="e.g., snmp" value="snmp"
-                                style="flex: 1;">
+                                style="flex: 1; color: #3b82f6; font-weight: 500;">
                             <button id="saveLpSettingsBtn" data-i18n="save_btn">Save</button>
                         </div>
                     </div>
@@ -678,9 +683,10 @@
                     </div>
 
                     <div class="settings-group">
-                        <h3 data-i18n="lp_preview">Line Protocol Preview</h3>
-                        <div id="lpPreview"
-                            style="padding: 1rem; background: #1e293b; color: #f8fafc; border-radius: 8px; font-family: monospace; white-space: pre-wrap; overflow-x: auto; border: 1px solid var(--border);">
+                        <h3 data-i18n="lp_timestamp">Timestamp</h3>
+                        <div style="display: flex;">
+                            <input type="text" id="lpTimestamp" value="1623456789000000000" disabled
+                                style="flex: 1; color: #eab308; font-weight: 500; background-color: #f8fafc; cursor: not-allowed; border: 1px solid var(--border);">
                         </div>
                     </div>
                 </div>
@@ -1067,7 +1073,14 @@
                 const tagsStr = tagPairs.length > 0 ? ',' + tagPairs.join(',') : '';
 
                 // InfluxDB Line Protocol: <measurement>[,<tag_key>=<tag_value>...] <field_key>=<field_value>[,<field_key>=<field_value>...] [timestamp]
-                lpPreview.textContent = `${measurement}${tagsStr} temp_c=42.3,load_pct=73.2 1623456789000000000`;
+                // Colors: Measurement=Blue (#3b82f6), Tags=Red (#ef4444), Fields=Green (#10b981), Timestamp=Yellow (#eab308)
+
+                const measurementHtml = `<span style="color: #3b82f6">${measurement}</span>`;
+                const tagsHtml = `<span style="color: #ef4444">${tagsStr}</span>`;
+                const fieldsHtml = `<span style="color: #10b981"> temp_c=42.3,load_pct=73.2</span>`;
+                const timestampHtml = `<span style="color: #eab308"> 1623456789000000000</span>`;
+
+                lpPreview.innerHTML = `${measurementHtml}${tagsHtml}${fieldsHtml}${timestampHtml}`;
             }
 
             function createTagRow(key = '', value = '') {
@@ -1077,8 +1090,8 @@
                 row.style.gap = '0.5rem';
                 row.style.alignItems = 'center';
                 row.innerHTML = `
-                    <input type="text" class="tag-key" placeholder="Key" value="${key}" style="flex: 1;">
-                    <input type="text" class="tag-val" placeholder="Value" value="${value}" style="flex: 2;">
+                    <input type="text" class="tag-key" placeholder="Key" value="${key}" style="flex: 1; color: #ef4444; font-weight: 500;">
+                    <input type="text" class="tag-val" placeholder="Value" value="${value}" style="flex: 2; color: #ef4444; font-weight: 500;">
                     <button class="delete-tag-btn" style="background: #ef4444; padding: 0.5rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -1168,7 +1181,15 @@
                         body: JSON.stringify({ measurement, tags })
                     });
                     if (res.ok) {
-                        alert('Settings saved successfully!');
+                        const originalText = saveLpSettingsBtn.textContent;
+                        saveLpSettingsBtn.textContent = 'Saved!';
+                        saveLpSettingsBtn.style.backgroundColor = '#10b981'; // Green
+                        setTimeout(() => {
+                            saveLpSettingsBtn.textContent = originalText;
+                            saveLpSettingsBtn.style.backgroundColor = '';
+                            saveLpSettingsBtn.disabled = false;
+                        }, 2000);
+                        return; // Exit so we don't enable button immediately in finally block
                     } else {
                         alert('Failed to save settings');
                     }
@@ -1552,7 +1573,10 @@
 
                         return `
                         <th title="${desc.replace(/"/g, '&quot;')}" style="vertical-align: top; min-width: 150px;">
-                            <div style="font-weight: 600; margin-bottom: 0.25rem;">${name}</div>
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.25rem;">
+                                <div style="font-weight: 600;">${name}</div>
+                                <button class="pick-btn" onclick="pickValue('${name.replace(/'/g, "\\'")}')" title="Pick Column Name">Key</button>
+                            </div>
                             <div style="font-weight: 400; font-size: 0.75rem; color: var(--text-muted); white-space: normal; line-height: 1.2;">
                                 ${shortDesc === translations[currentLang].no_desc_label ? `<span style="opacity: 0.5;">${translations[currentLang].no_desc_label}</span>` : shortDesc}
                             </div>
