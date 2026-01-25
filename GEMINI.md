@@ -13,18 +13,20 @@ The tool allows administrators to map hardware parameters (via **SNMP** or **Mod
 
 ## InfluxDB & Telemetry Format
 
-*   **Line Protocol Format:** `measurement,tag1=...,tag2=... field=value timestamp`
-*   **JSON Mapping Logic:**
-    *   **Measurement:** Defines the equipment class (e.g., `ups`, `pdu`, `cooling`). These are derived from upper MIB branches.
-    *   **Tags:** Must include `device_sn` (Serial Number) and `metric` (parameter name).
-*   **Hardware Class Examples (PowerNet-MIB):**
-    *   `ups` (OID 1.3.6.1.4.1.318.1.1.1)
-    *   `environmentalMonitor` (OID 1.3.6.1.4.1.318.1.1.10)
-    *   `rPDU` (OID 1.3.6.1.4.1.318.1.1.12)
-    *   `airConditioners` (OID 1.3.6.1.4.1.318.1.1.13)
+*   **Line Protocol Format:** `<measurement>[,<tag_key>=<tag_value>[,<tag_key>=<tag_value>...]] <field_key>=<field_value>[,<field_key>=<field_value>...] [timestamp]`
+*   **Schema Design (Optimized for Cardinality):**
+    *   **Measurement:** `snmp` (general) or separate `snmp_numeric` and `snmp_state`.
+    *   **Tags:** Used for filtering and grouping.
+        *   `zone` (e.g., `ups_room`, `data_cube1`)
+        *   `device` (e.g., `ups_1`)
+        *   `vendor`, `model`, `site` (optional)
+        *   `device_sn` (Serial Number - mandatory identity)
+    *   **Fields:** Actual data values.
+        *   **Numeric:** `temp_c=42.3`, `load_pct=73.2`, `voltage=230`
+        *   **Discrete/States:** `on_battery=0i`, `alarm=1i`, `status_code=3i` (using `i` suffix for integers)
 *   **Record Examples:**
-    *   `ups,device_sn=XZ001,metric=battery_charge value=87`
-    *   `power,device_sn=XZ002,metric=input_voltage value=230`
+    *   `snmp,zone=ups_room,device=ups_1,device_sn=XZ001 temp_c=42.3,load_pct=73.2`
+    *   `snmp_state,zone=ups_room,device=ups_1,device_sn=XZ001 on_battery=0i,alarm=1i`
 
 ---
 
@@ -43,15 +45,17 @@ The tool allows administrators to map hardware parameters (via **SNMP** or **Mod
 
 ## InfluxDB және телеметрия форматы
 
-*   **Line Protocol форматы:** `measurement,tag1=...,tag2=... field=value timestamp`
-*   **JSON сәйкестендіру (Map) логикасы:**
-    *   **Measurement (Өлшем):** Жабдық класын анықтайды (мысалы, `ups`, `pdu`, `cooling`). Олар MIB-тің жоғарғы тармақтарынан алынады.
-    *   **Tags (Тегтер):** `device_sn` (сериялық нөмір) және `metric` (параметр атауы) міндетті түрде қосылуы керек.
-*   **Аппараттық класс мысалдары (PowerNet-MIB):**
-    *   `ups` (OID 1.3.6.1.4.1.318.1.1.1)
-    *   `environmentalMonitor` (OID 1.3.6.1.4.1.318.1.1.10)
-    *   `rPDU` (OID 1.3.6.1.4.1.318.1.1.12)
-    *   `airConditioners` (OID 1.3.6.1.4.1.318.1.1.13)
+*   **Line Protocol форматы:** `<measurement>[,<tag_key>=<tag_value>[,<tag_key>=<tag_value>...]] <field_key>=<field_value>[,<field_key>=<field_value>...] [timestamp]`
+*   **Схема дизайны (Кардиналдықты оңтайландыру):**
+    *   **Measurement (Өлшем):** `snmp` (жалпы) немесе бөлек `snmp_numeric` және `snmp_state`.
+    *   **Tags (Тегтер):** Сүзу және топтастыру үшін қолданылады.
+        *   `zone` (мысалы, `ups_room`, `data_cube1`)
+        *   `device` (мысалы, `ups_1`)
+        *   `vendor`, `model`, `site` (міндетті емес)
+        *   `device_sn` (Сериялық нөмір - міндетті сәйкестендіру)
+    *   **Fields (Өрістер):** Нақты деректер мәндері.
+        *   **Сандық:** `temp_c=42.3`, `load_pct=73.2`, `voltage=230`
+        *   **Дискретті/Күйлер:** `on_battery=0i`, `alarm=1i`, `status_code=3i` (бүтін сандар үшін `i` суффиксін қолдану)
 *   **Жазба мысалдары:**
-    *   `ups,device_sn=XZ001,metric=battery_charge value=87`
-    *   `power,device_sn=XZ002,metric=input_voltage value=230`
+    *   `snmp,zone=ups_room,device=ups_1,device_sn=XZ001 temp_c=42.3,load_pct=73.2`
+    *   `snmp_state,zone=ups_room,device=ups_1,device_sn=XZ001 on_battery=0i,alarm=1i`

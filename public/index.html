@@ -388,20 +388,44 @@
     <div class="container">
         <div class="top-section">
             <header>
-                <h1>SNMP Data Viewer</h1>
-                <p style="color: var(--text-muted);">Explore your network equipment data visually</p>
+                <h1 data-i18n="header_h1">SNMP Data Viewer</h1>
+                <p style="color: var(--text-muted);" data-i18n="header_p">Explore your network equipment data visually
+                </p>
                 <div class="settings-container">
                     <button id="settingsBtn" class="settings-btn">
-                        <span>Settings</span>
+                        <span data-i18n="settings_btn">Settings</span>
                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
                     <div id="settingsDropdown" class="dropdown-content">
+                        <!-- Language Selection -->
+                        <div style="padding: 0.5rem; border-bottom: 1px solid var(--border); margin-bottom: 0.5rem;">
+                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;"
+                                data-i18n="language_label">Language</div>
+                            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                <label class="lang-option"
+                                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                    <input type="radio" name="language" value="en" checked
+                                        onclick="changeLanguage('en')">
+                                    <span>English</span>
+                                </label>
+                                <label class="lang-option"
+                                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                    <input type="radio" name="language" value="ru" onclick="changeLanguage('ru')">
+                                    <span>Русский</span>
+                                </label>
+                                <label class="lang-option"
+                                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem; border-radius: 4px; cursor: pointer; font-size: 0.875rem;">
+                                    <input type="radio" name="language" value="kk" onclick="changeLanguage('kk')">
+                                    <span>Қазақша</span>
+                                </label>
+                            </div>
+                        </div>
                         <div style="padding: 0.5rem; border-radius: 8px;">
                             <input type="checkbox" id="hideNoDesc"
                                 style="margin-right: 0.5rem; vertical-align: middle;">
-                            <label for="hideNoDesc"
+                            <label for="hideNoDesc" data-i18n="hide_no_desc"
                                 style="vertical-align: middle; font-size: 0.875rem; color: var(--text-main); cursor: pointer;">Hide
                                 metrics without description</label>
                         </div>
@@ -460,12 +484,12 @@
 
                 <div class="mib-panel">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h3>MIB Files</h3>
+                        <h3 data-i18n="mibs_header">MIB Files</h3>
                         <div style="display: flex; gap: 0.5rem;">
                             <input type="file" id="mibUploadInput" style="display: none;" accept=".txt,.mib,.my">
-                            <button id="uploadMibBtn" class="btn-secondary"
+                            <button id="uploadMibBtn" class="btn-secondary" data-i18n="upload_btn"
                                 onclick="document.getElementById('mibUploadInput').click()">+ Upload</button>
-                            <button id="deleteMibBtn" class="btn-secondary"
+                            <button id="deleteMibBtn" class="btn-secondary" data-i18n="delete_btn"
                                 style="display: none; border-color: #ef4444; color: #ef4444;"
                                 onclick="deleteSelectedMibs()">Delete</button>
                         </div>
@@ -480,8 +504,9 @@
 
             <div id="loading" class="loading">
                 <div class="spinner"></div>
-                <p>Scanning device... This may take a few seconds.</p>
-                <button id="stopBtn" style="background-color: #ef4444; margin-top: 1rem;">Stop & Reset
+                <p data-i18n="scanning_text">Scanning device... This may take a few seconds.</p>
+                <button id="stopBtn" data-i18n="stop_btn" style="background-color: #ef4444; margin-top: 1rem;">Stop &
+                    Reset
                     Interface</button>
             </div>
 
@@ -510,10 +535,11 @@
                         <div id="searchInfo" style="margin-top: 0.5rem; font-size: 0.875rem; color: #64748b;"></div>
                     </div>
                     <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <button id="downloadTxtBtn"
+                        <button id="downloadTxtBtn" data-i18n="download_txt"
                             style="background-color: #64748b; padding: 0.5rem 1rem; font-size: 0.875rem;">Download
                             TXT</button>
-                        <button id="downloadCsvBtn" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+                        <button id="downloadCsvBtn" data-i18n="download_csv"
+                            style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download
                             CSV</button>
                     </div>
                 </div>
@@ -543,13 +569,208 @@
         const searchInput = document.getElementById('searchInput');
         const clearSearchBtn = document.getElementById('clearSearchBtn');
         const searchInfo = document.getElementById('searchInfo');
+        const hideNoDescCheckbox = document.getElementById('hideNoDesc');
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsDropdown = document.getElementById('settingsDropdown');
 
         let lastScanData = null;
         let searchQuery = '';
         let abortController = null;
-        const hideNoDescCheckbox = document.getElementById('hideNoDesc');
-        const settingsBtn = document.getElementById('settingsBtn');
-        const settingsDropdown = document.getElementById('settingsDropdown');
+        const translations = {
+            en: {
+                title: "SNMP Viewer",
+                header_h1: "SNMP Data Viewer",
+                header_p: "Explore your network equipment data visually",
+                settings_btn: "Settings",
+                language_label: "Language",
+                hide_no_desc: "Hide metrics without description",
+                target_ip_placeholder: "Target IP (e.g., 192.168.2.1)",
+                root_oid_placeholder: "Root OID (Optional)",
+                community_placeholder: "Community",
+                snmp_v_select: "Select SNMP Version...",
+                scan_btn: "Scan Device",
+                scanning_btn: "Scanning...",
+                mibs_header: "MIB Files",
+                upload_btn: "+ Upload",
+                delete_btn: "Delete",
+                no_mibs: "No MIBs found",
+                scanning_text: "Scanning device... This may take a few seconds.",
+                stop_btn: "Stop & Reset Interface",
+                search_placeholder: "Search sections and columns...",
+                download_txt: "Download TXT",
+                download_csv: "Download CSV",
+                general_info: "General Information",
+                data_group: "Data Group",
+                found_sections: "Found {visible} of {total} sections",
+                no_data: "No data found.",
+                no_results: "No sections match your search.",
+                name_oid_col: "Name / OID",
+                value_col: "Value",
+                desc_col: "Description",
+                index_col: "Index",
+                no_desc_label: "no description",
+                v3_user_placeholder: "Username",
+                v3_auth_pwd_placeholder: "Auth Password",
+                v3_priv_pwd_placeholder: "Priv Password",
+                v3_auth_none: "Auth: None",
+                v3_priv_none: "Priv: None",
+                error_ip: "Please enter a target IP address.",
+                error_version: "Please select an SNMP version protocol.",
+                confirm_delete: "Are you sure you want to delete {count} MIB file(s)?",
+                delete_failed: "Delete failed: ",
+                upload_failed: "Upload failed: "
+            },
+            ru: {
+                title: "SNMP Просмотрщик",
+                header_h1: "Просмотр данных SNMP",
+                header_p: "Визуальное исследование данных сетевого оборудования",
+                settings_btn: "Настройки",
+                language_label: "Язык",
+                hide_no_desc: "Скрыть метрики без описания",
+                target_ip_placeholder: "Целевой IP (например, 192.168.2.1)",
+                root_oid_placeholder: "Корневой OID (необязательно)",
+                community_placeholder: "Сообщество (Community)",
+                snmp_v_select: "Выберите версию SNMP...",
+                scan_btn: "Сканировать устройство",
+                scanning_btn: "Сканирование...",
+                mibs_header: "MIB файлы",
+                upload_btn: "+ Загрузить",
+                delete_btn: "Удалить",
+                no_mibs: "MIB файлы не найдены",
+                scanning_text: "Сканирование устройства... Это может занять несколько секунд.",
+                stop_btn: "Остановить и сбросить интерфейс",
+                search_placeholder: "Поиск по разделам и колонкам...",
+                download_txt: "Скачать TXT",
+                download_csv: "Скачать CSV",
+                general_info: "Общая информация",
+                data_group: "Группа данных",
+                found_sections: "Найдено {visible} из {total} разделов",
+                no_data: "Данные не найдены.",
+                no_results: "Нет разделов, соответствующих вашему поиску.",
+                name_oid_col: "Имя / OID",
+                value_col: "Значение",
+                desc_col: "Описание",
+                index_col: "Индекс",
+                no_desc_label: "нет описания",
+                v3_user_placeholder: "Имя пользователя",
+                v3_auth_pwd_placeholder: "Пароль аутентификации",
+                v3_priv_pwd_placeholder: "Пароль приватности",
+                v3_auth_none: "Аунт: Нет",
+                v3_priv_none: "Прив: Нет",
+                error_ip: "Пожалуйста, введите целевой IP-адрес.",
+                error_version: "Пожалуйста, выберите протокол версии SNMP.",
+                confirm_delete: "Вы уверены, что хотите удалить {count} MIB файл(ов)?",
+                delete_failed: "Ошибка удаления: ",
+                upload_failed: "Ошибка загрузки: "
+            },
+            kk: {
+                title: "SNMP Көруші",
+                header_h1: "SNMP деректерін көру",
+                header_p: "Желілік жабдық деректерін визуалды түрде зерттеу",
+                settings_btn: "Параметрлер",
+                language_label: "Тіл",
+                hide_no_desc: "Сипаттамасы жоқ метрикаларды жасыру",
+                target_ip_placeholder: "Мақсатты IP (мысалы, 192.168.2.1)",
+                root_oid_placeholder: "Түбірлік OID (міндетті емес)",
+                community_placeholder: "Қауымдастық (Community)",
+                snmp_v_select: "SNMP нұсқасын таңдаңыз...",
+                scan_btn: "Құрылғыны сканерлеу",
+                scanning_btn: "Сканерлеу...",
+                mibs_header: "MIB файлдары",
+                upload_btn: "+ Жүктеу",
+                delete_btn: "Жою",
+                no_mibs: "MIB файлдары табылмады",
+                scanning_text: "Құрылғыны сканерлеу... Бұл бірнеше секунд алуы мүмкін.",
+                stop_btn: "Тоқтату және интерфейсті қайта орнату",
+                search_placeholder: "Бөлімдер мен бағандар бойынша іздеу...",
+                download_txt: "TXT жүктеу",
+                download_csv: "CSV жүктеу",
+                general_info: "Жалпы ақпарат",
+                data_group: "Деректер тобы",
+                found_sections: "{total} бөлімнің {visible} табылды",
+                no_data: "Деректер табылмады.",
+                no_results: "Іздеуіңізге сәйкес келетін бөлімдер жоқ.",
+                name_oid_col: "Аты / OID",
+                value_col: "Мән",
+                desc_col: "Сипаттама",
+                index_col: "Индекс",
+                no_desc_label: "сипаттама жоқ",
+                v3_user_placeholder: "Пайдаланушы аты",
+                v3_auth_pwd_placeholder: "Аутентификация құпия сөзі",
+                v3_priv_pwd_placeholder: "Құпиялылық құпия сөзі",
+                v3_auth_none: "Аунт: Жоқ",
+                v3_priv_none: "Прив: Жоқ",
+                error_ip: "Мақсатты IP мекенжайын енгізіңіз.",
+                error_version: "SNMP нұсқасының протоколын таңдаңыз.",
+                confirm_delete: "{count} MIB файлын жоюыңызға сенімдісіз бе?",
+                delete_failed: "Жою сәтсіз аяқталды: ",
+                upload_failed: "Жүктеу сәтсіз аяқталды: "
+            }
+        };
+
+        let currentLang = localStorage.getItem('selectedLanguage') || 'en';
+
+        function applyTranslations(lang) {
+            currentLang = lang;
+            localStorage.setItem('selectedLanguage', lang);
+            const t = translations[lang];
+
+            // Update title
+            document.title = t.title;
+
+            // Update elements with data-i18n attribute
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (t[key]) {
+                    el.textContent = t[key];
+                }
+            });
+
+            // Update placeholders and options
+            document.getElementById('targetIp').placeholder = t.target_ip_placeholder;
+            document.getElementById('rootOid').placeholder = t.root_oid_placeholder;
+            document.getElementById('community').placeholder = t.community_placeholder;
+            document.getElementById('searchInput').placeholder = t.search_placeholder;
+            document.getElementById('v3User').placeholder = t.v3_user_placeholder;
+            document.getElementById('v3AuthPwd').placeholder = t.v3_auth_pwd_placeholder;
+            document.getElementById('v3PrivPwd').placeholder = t.v3_priv_pwd_placeholder;
+
+            const snmpVSelect = document.getElementById('snmpVersion');
+            snmpVSelect.options[0].textContent = t.snmp_v_select;
+
+            const v3AuthProto = document.getElementById('v3AuthProto');
+            v3AuthProto.options[0].textContent = t.v3_auth_none;
+
+            const v3PrivProto = document.getElementById('v3PrivProto');
+            v3PrivProto.options[0].textContent = t.v3_priv_none;
+
+            // Update scan button text if not scanning
+            if (!scanBtn.disabled) {
+                scanBtn.textContent = t.scan_btn;
+            } else {
+                scanBtn.textContent = t.scanning_btn;
+            }
+
+            // Sync radio button
+            document.querySelectorAll('input[name="language"]').forEach(radio => {
+                radio.checked = radio.value === lang;
+            });
+
+            // Re-render components that might need translation (like search results info)
+            if (lastScanData) {
+                renderTables(lastScanData);
+            } else {
+                fetchMibs(); // To translate "No MIBs found" if empty
+            }
+        }
+
+        function changeLanguage(lang) {
+            applyTranslations(lang);
+            settingsDropdown.classList.remove('show');
+        }
+
+        // Initialize language
+        applyTranslations(currentLang);
 
         if (settingsBtn) {
             settingsBtn.addEventListener('click', (e) => {
@@ -626,11 +847,11 @@
                         fetchMibs(); // Refresh list
                     } else {
                         const err = await res.json();
-                        alert('Upload failed: ' + err.error);
+                        alert(translations[currentLang].upload_failed + err.error);
                     }
                 } catch (error) {
                     console.error('Upload error:', error);
-                    alert('Upload failed.');
+                    alert(translations[currentLang].upload_failed);
                 }
                 // Reset input
                 e.target.value = '';
@@ -649,7 +870,7 @@
 
         function renderMibList(files) {
             if (files.length === 0) {
-                mibListDiv.innerHTML = '<div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">No MIBs found</div>';
+                mibListDiv.innerHTML = `<div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">${translations[currentLang].no_mibs}</div>`;
                 deleteMibBtn.style.display = 'none';
                 return;
             }
@@ -676,7 +897,7 @@
             const selected = getSelectedMibs();
             if (selected.length === 0) return;
 
-            if (!confirm(`Are you sure you want to delete ${selected.length} MIB file(s)?`)) return;
+            if (!confirm(translations[currentLang].confirm_delete.replace('{count}', selected.length))) return;
 
             try {
                 const res = await fetch('/api/mibs', {
@@ -688,11 +909,11 @@
                     fetchMibs(); // Refresh list
                 } else {
                     const err = await res.json();
-                    alert('Delete failed: ' + err.error);
+                    alert(translations[currentLang].delete_failed + err.error);
                 }
             } catch (error) {
                 console.error('Delete error:', error);
-                alert('Delete failed.');
+                alert(translations[currentLang].delete_failed);
             }
         }
 
@@ -709,12 +930,12 @@
             const version = snmpVersion.value;
 
             if (!ip) {
-                showError("Please enter a target IP address.");
+                showError(translations[currentLang].error_ip);
                 return;
             }
 
             if (!version) {
-                showError("Please select an SNMP version protocol.");
+                showError(translations[currentLang].error_version);
                 return;
             }
 
@@ -775,11 +996,11 @@
             if (isLoading) {
                 loadingDiv.style.display = 'block';
                 scanBtn.disabled = true;
-                scanBtn.textContent = 'Scanning...';
+                scanBtn.textContent = translations[currentLang].scanning_btn;
             } else {
                 loadingDiv.style.display = 'none';
                 scanBtn.disabled = false;
-                scanBtn.textContent = 'Scan Device';
+                scanBtn.textContent = translations[currentLang].scan_btn;
             }
         }
 
@@ -862,7 +1083,7 @@
                 // Apply search filter to scalar results
                 if (searchQuery) {
                     scalarResults = scalarResults.filter(r =>
-                        matchesSearch(r.name) || matchesSearch(r.oid) || matchesSearch('General Information')
+                        matchesSearch(r.name) || matchesSearch(r.oid) || matchesSearch(translations[currentLang].general_info)
                     );
                 }
 
@@ -872,7 +1093,7 @@
                     const card = document.createElement('div');
                     card.className = 'table-card';
                     card.style.marginBottom = '2rem';
-                    card.innerHTML = `<div class="card-header"><h2>General Information</h2></div>`;
+                    card.innerHTML = `<div class="card-header"><h2>${translations[currentLang].general_info}</h2></div>`;
 
                     const tableWrapper = document.createElement('div');
                     tableWrapper.className = 'table-responsive';
@@ -880,9 +1101,9 @@
                     tableEl.innerHTML = `
                         <thead>
                             <tr>
-                                <th>Name / OID</th>
-                                <th>Value</th>
-                                <th>Description</th>
+                                <th>${translations[currentLang].name_oid_col}</th>
+                                <th>${translations[currentLang].value_col}</th>
+                                <th>${translations[currentLang].desc_col}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -890,7 +1111,7 @@
                                 <tr>
                                     <td style="font-weight: 500;">${r.name || r.oid}</td>
                                     <td>${r.value}</td>
-                                    <td style="color: var(--text-muted); font-size: 0.75rem;">${r.description || 'no description'}</td>
+                                    <td style="color: var(--text-muted); font-size: 0.75rem;">${r.description || translations[currentLang].no_desc_label}</td>
                                 </tr>
                             `).join('')}
                         </tbody>
@@ -903,11 +1124,11 @@
 
             if (!tables || tables.length === 0) {
                 if (!raw || raw.length === 0) {
-                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No data found.</div>';
+                    resultsDiv.innerHTML = `<div style="text-align: center; padding: 2rem; color: #64748b;">${translations[currentLang].no_data}</div>`;
                 }
                 // Update search info
                 if (searchQuery) {
-                    searchInfo.textContent = `Found ${visibleSections} of ${totalSections} sections`;
+                    searchInfo.textContent = translations[currentLang].found_sections.replace('{visible}', visibleSections).replace('{total}', totalSections);
                 } else {
                     searchInfo.textContent = '';
                 }
@@ -941,7 +1162,7 @@
 
                 const header = document.createElement('div');
                 header.className = 'card-header';
-                header.innerHTML = `<h2>Data Group: ${table.oid}</h2>`;
+                header.innerHTML = `<h2>${translations[currentLang].data_group}: ${table.oid}</h2>`;
                 card.appendChild(header);
 
                 const topScrollWrapper = document.createElement('div');
@@ -961,7 +1182,7 @@
 
                 const colHeaders = displayColumns.map(col => {
                     const name = table.columnNames && table.columnNames[col] ? table.columnNames[col] : `Col ${col}`;
-                    const desc = table.columnDescriptions && table.columnDescriptions[col] ? table.columnDescriptions[col] : 'no description';
+                    const desc = table.columnDescriptions && table.columnDescriptions[col] ? table.columnDescriptions[col] : translations[currentLang].no_desc_label;
 
                     // Limit description length in header for readability
                     const shortDesc = desc.length > 60 ? desc.substring(0, 57) + '...' : desc;
@@ -970,12 +1191,12 @@
                         <th title="${desc.replace(/"/g, '&quot;')}" style="vertical-align: top; min-width: 150px;">
                             <div style="font-weight: 600; margin-bottom: 0.25rem;">${name}</div>
                             <div style="font-weight: 400; font-size: 0.75rem; color: var(--text-muted); white-space: normal; line-height: 1.2;">
-                                ${shortDesc === 'no description' ? '<span style="opacity: 0.5;">no description</span>' : shortDesc}
+                                ${shortDesc === translations[currentLang].no_desc_label ? `<span style="opacity: 0.5;">${translations[currentLang].no_desc_label}</span>` : shortDesc}
                             </div>
                         </th>`;
                 }).join('');
 
-                headRow.innerHTML = '<th style="vertical-align: top;">Index</th>' + colHeaders;
+                headRow.innerHTML = `<th style="vertical-align: top;">${translations[currentLang].index_col}</th>` + colHeaders;
                 thead.appendChild(headRow);
                 tableEl.appendChild(thead);
 
@@ -1016,9 +1237,9 @@
 
             // Update search info
             if (searchQuery) {
-                searchInfo.textContent = `Found ${visibleSections} of ${totalSections} sections`;
+                searchInfo.textContent = translations[currentLang].found_sections.replace('{visible}', visibleSections).replace('{total}', totalSections);
                 if (visibleSections === 0) {
-                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No sections match your search.</div>';
+                    resultsDiv.innerHTML = `<div style="text-align: center; padding: 2rem; color: #64748b;">${translations[currentLang].no_results}</div>`;
                 }
             } else {
                 searchInfo.textContent = '';
