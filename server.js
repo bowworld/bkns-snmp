@@ -14,6 +14,36 @@ if (!fs.existsSync(mibsDir)) {
     fs.mkdirSync(mibsDir, { recursive: true });
 }
 
+// Settings storage
+const settingsFile = path.join(__dirname, 'settings.json');
+if (!fs.existsSync(settingsFile)) {
+    fs.writeFileSync(settingsFile, JSON.stringify({
+        measurement: 'snmp',
+        tags: [
+            { key: 'device', value: 'ups_1' },
+            { key: 'zone', value: 'ups_room' }
+        ]
+    }));
+}
+
+function getSettings() {
+    try {
+        return JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+    } catch (e) {
+        return {
+            measurement: 'snmp',
+            tags: [
+                { key: 'device', value: 'ups_1' },
+                { key: 'zone', value: 'ups_room' }
+            ]
+        };
+    }
+}
+
+function saveSettings(settings) {
+    fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
+}
+
 // Initialize MIB library
 const mibManager = new MibManager(mibsDir);
 
@@ -78,6 +108,23 @@ app.delete('/api/mibs', (req, res) => {
     });
 
     res.json(results);
+});
+
+// API: Settings
+app.get('/api/settings', (req, res) => {
+    res.json(getSettings());
+});
+
+app.post('/api/settings', (req, res) => {
+    const settings = getSettings();
+    if (req.body.measurement) {
+        settings.measurement = req.body.measurement;
+    }
+    if (req.body.tags && Array.isArray(req.body.tags)) {
+        settings.tags = req.body.tags;
+    }
+    saveSettings(settings);
+    res.json({ message: 'Settings saved' });
 });
 
 app.get('/api/snmp-walk', (req, res) => {

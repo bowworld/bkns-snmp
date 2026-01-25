@@ -632,9 +632,29 @@
                     <h2 data-i18n="tab_protocol">Line Protocol Settings</h2>
                     <p style="color: var(--text-muted); margin-bottom: 2rem;">Configure how data is transformed into
                         InfluxDB Line Protocol format.</p>
-                    <div
-                        style="padding: 2rem; border: 2px dashed var(--border); border-radius: 12px; text-align: center; color: var(--text-muted);">
-                        Logic for Line Protocol mapping will be implemented here.
+                    <div class="settings-group">
+                        <h3 data-i18n="lp_measurement">Measurement</h3>
+                        <div style="display: flex; gap: 0.5rem; max-width: 500px;">
+                            <input type="text" id="lpMeasurement" placeholder="e.g., snmp" value="snmp"
+                                style="flex: 1;">
+                            <button id="saveLpSettingsBtn" data-i18n="save_btn">Save</button>
+                        </div>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 data-i18n="lp_tags">Tags</h3>
+                        <div id="tagsContainer"
+                            style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
+                            <!-- Tags will be rendered here -->
+                        </div>
+                        <button id="addTagBtn" class="btn-secondary">+ Add Tag</button>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 data-i18n="lp_preview">Line Protocol Preview</h3>
+                        <div id="lpPreview"
+                            style="padding: 1rem; background: #1e293b; color: #f8fafc; border-radius: 8px; font-family: monospace; white-space: pre-wrap; overflow-x: auto; border: 1px solid var(--border);">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -710,8 +730,12 @@
             const clearSearchBtn = document.getElementById('clearSearchBtn');
             const searchInfo = document.getElementById('searchInfo');
             const hideNoDescCheckbox = document.getElementById('hideNoDesc');
-            const settingsBtn = document.getElementById('settingsBtn');
             const settingsDropdown = document.getElementById('settingsDropdown');
+            const lpMeasurement = document.getElementById('lpMeasurement');
+            const lpPreview = document.getElementById('lpPreview');
+            const saveLpSettingsBtn = document.getElementById('saveLpSettingsBtn');
+            const tagsContainer = document.getElementById('tagsContainer');
+            const addTagBtn = document.getElementById('addTagBtn');
 
             let lastScanData = null;
             let searchQuery = '';
@@ -762,7 +786,11 @@
                     tab_snmp: "SNMP Settings",
                     tab_protocol: "Line Protocol",
                     tab_general: "General Settings",
-                    tab_about: "About"
+                    tab_about: "About",
+                    lp_measurement: "Measurement Name",
+                    lp_preview: "Line Protocol Preview",
+                    save_btn: "Save",
+                    lp_tags: "Tags"
                 },
                 ru: {
                     title: "SNMP Просмотрщик",
@@ -809,7 +837,11 @@
                     tab_snmp: "SNMP Настройки",
                     tab_protocol: "Line Protocol",
                     tab_general: "Общие настройки",
-                    tab_about: "О проекте"
+                    tab_about: "О проекте",
+                    lp_measurement: "Имя измерения (Measurement)",
+                    lp_preview: "Предпросмотр Line Protocol",
+                    save_btn: "Сохранить",
+                    lp_tags: "Теги (Tags)"
                 },
                 kk: {
                     title: "SNMP Көруші",
@@ -856,8 +888,12 @@
                     tab_snmp: "SNMP Параметрлері",
                     tab_protocol: "Line Protocol",
                     tab_general: "Жалпы параметрлер",
-                    tab_about: "Жоба туралы"
-                }
+                    tab_about: "Жоба туралы",
+                    lp_measurement: "Measurement атауы",
+                    lp_preview: "Line Protocol алдын ала қарау",
+                    save_btn: "Сақтау",
+                    lp_tags: "Тегтер (Tags)"
+                },
             };
 
             let currentLang = localStorage.getItem('selectedLanguage') || 'en';
@@ -986,6 +1022,115 @@
                     community.style.display = 'block';
                 }
             });
+
+            function updateLineProtocolPreview() {
+                const measurement = lpMeasurement.value.trim() || 'snmp';
+
+                // Get tags
+                const tagPairs = [];
+                document.querySelectorAll('.tag-row').forEach(row => {
+                    const key = row.querySelector('.tag-key').value.trim();
+                    const val = row.querySelector('.tag-val').value.trim();
+                    if (key) {
+                        tagPairs.push(`${key}=${val}`);
+                    }
+                });
+
+                const tagsStr = tagPairs.length > 0 ? ',' + tagPairs.join(',') : '';
+
+                // InfluxDB Line Protocol: <measurement>[,<tag_key>=<tag_value>...] <field_key>=<field_value>[,<field_key>=<field_value>...] [timestamp]
+                lpPreview.textContent = `${measurement}${tagsStr} temp_c=42.3,load_pct=73.2 1623456789000000000`;
+            }
+
+            function createTagRow(key = '', value = '') {
+                const row = document.createElement('div');
+                row.className = 'tag-row';
+                row.style.display = 'flex';
+                row.style.gap = '0.5rem';
+                row.style.alignItems = 'center';
+                row.innerHTML = `
+                    <input type="text" class="tag-key" placeholder="Key" value="${key}" style="flex: 1;">
+                    <input type="text" class="tag-val" placeholder="Value" value="${value}" style="flex: 2;">
+                    <button class="delete-tag-btn" style="background: #ef4444; padding: 0.5rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                `;
+
+                row.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('input', updateLineProtocolPreview);
+                });
+
+                row.querySelector('.delete-tag-btn').addEventListener('click', () => {
+                    row.remove();
+                    updateLineProtocolPreview();
+                });
+
+                tagsContainer.appendChild(row);
+            }
+
+            addTagBtn.addEventListener('click', () => {
+                createTagRow();
+                updateLineProtocolPreview();
+            });
+
+            lpMeasurement.addEventListener('input', updateLineProtocolPreview);
+            updateLineProtocolPreview();
+
+            async function fetchSettings() {
+                try {
+                    const res = await fetch('/api/settings');
+                    const settings = await res.json();
+                    if (settings.measurement) {
+                        lpMeasurement.value = settings.measurement;
+                    }
+                    if (settings.tags && Array.isArray(settings.tags)) {
+                        tagsContainer.innerHTML = '';
+                        settings.tags.forEach(t => createTagRow(t.key, t.value));
+                    } else {
+                        // Default tags if none found
+                        createTagRow('device', 'ups_1');
+                        createTagRow('zone', 'ups_room');
+                    }
+                    updateLineProtocolPreview();
+                } catch (err) {
+                    console.error('Failed to fetch settings:', err);
+                }
+            }
+
+            saveLpSettingsBtn.addEventListener('click', async () => {
+                const measurement = lpMeasurement.value.trim();
+                const tags = [];
+                document.querySelectorAll('.tag-row').forEach(row => {
+                    const key = row.querySelector('.tag-key').value.trim();
+                    const value = row.querySelector('.tag-val').value.trim();
+                    if (key) {
+                        tags.push({ key, value });
+                    }
+                });
+
+                saveLpSettingsBtn.disabled = true;
+                try {
+                    const res = await fetch('/api/settings', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ measurement, tags })
+                    });
+                    if (res.ok) {
+                        alert('Settings saved successfully!');
+                    } else {
+                        alert('Failed to save settings');
+                    }
+                } catch (err) {
+                    console.error('Save error:', err);
+                    alert('Save error occurred');
+                } finally {
+                    saveLpSettingsBtn.disabled = false;
+                }
+            });
+
+            fetchSettings();
 
             // Load available MIBs on start
             fetchMibs();
