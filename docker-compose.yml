@@ -10,4 +10,5 @@ services:
       - ./mibs:/usr/src/app/mibs
       - ./public:/usr/src/app/public
       - ./server.js:/usr/src/app/server.js
+      - ./settings.json:/usr/src/app/settings.json
     restart: unless-stopped

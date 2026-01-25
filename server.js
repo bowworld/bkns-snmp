@@ -22,19 +22,34 @@ if (!fs.existsSync(settingsFile)) {
         tags: [
             { key: 'device', value: 'ups_1' },
             { key: 'zone', value: 'ups_room' }
+        ],
+        fields: [
+            { key: 'temp_c', value: '1.3.6.1.4.1.999.1.1' },
+            { key: 'load_pct', value: '1.3.6.1.4.1.999.1.2' }
         ]
     }));
 }
 
 function getSettings() {
     try {
-        return JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+        const settings = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+        if (!settings.fields) {
+            settings.fields = [
+                { key: 'temp_c', value: '42.3' },
+                { key: 'load_pct', value: '73.2' }
+            ];
+        }
+        return settings;
     } catch (e) {
         return {
             measurement: 'snmp',
             tags: [
                 { key: 'device', value: 'ups_1' },
                 { key: 'zone', value: 'ups_room' }
+            ],
+            fields: [
+                { key: 'temp_c', value: '42.3' },
+                { key: 'load_pct', value: '73.2' }
             ]
         };
     }
@@ -122,6 +137,9 @@ app.post('/api/settings', (req, res) => {
     }
     if (req.body.tags && Array.isArray(req.body.tags)) {
         settings.tags = req.body.tags;
+    }
+    if (req.body.fields && Array.isArray(req.body.fields)) {
+        settings.fields = req.body.fields;
     }
     saveSettings(settings);
     res.json({ message: 'Settings saved' });
