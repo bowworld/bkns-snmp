@@ -8,4 +8,6 @@ services:
       - "3000:3000"
     volumes:
       - ./mibs:/usr/src/app/mibs
+      - ./public:/usr/src/app/public
+      - ./server.js:/usr/src/app/server.js
     restart: unless-stopped
