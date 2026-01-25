@@ -468,6 +468,33 @@
             border-radius: 4px;
             border: 2px solid var(--bg);
         }
+
+        .active-input-highlight {
+            border-color: var(--primary) !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+            background-color: #f0f7ff !important;
+        }
+
+        .pick-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .pick-btn:hover {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: #eff6ff;
+        }
     </style>
 </head>
 
@@ -740,6 +767,7 @@
             let lastScanData = null;
             let searchQuery = '';
             let abortController = null;
+            let activeInputForPicking = null;
             const translations = {
                 en: {
                     title: "SNMP Viewer",
@@ -1060,6 +1088,14 @@
 
                 row.querySelectorAll('input').forEach(input => {
                     input.addEventListener('input', updateLineProtocolPreview);
+                    input.addEventListener('focus', () => {
+                        // Remove highlight from previous
+                        if (activeInputForPicking) {
+                            activeInputForPicking.classList.remove('active-input-highlight');
+                        }
+                        activeInputForPicking = input;
+                        activeInputForPicking.classList.add('active-input-highlight');
+                    });
                 });
 
                 row.querySelector('.delete-tag-btn').addEventListener('click', () => {
@@ -1076,7 +1112,21 @@
             });
 
             lpMeasurement.addEventListener('input', updateLineProtocolPreview);
+            lpMeasurement.addEventListener('focus', () => {
+                if (activeInputForPicking) {
+                    activeInputForPicking.classList.remove('active-input-highlight');
+                }
+                activeInputForPicking = lpMeasurement;
+                activeInputForPicking.classList.add('active-input-highlight');
+            });
             updateLineProtocolPreview();
+
+            function pickValue(val) {
+                if (activeInputForPicking) {
+                    activeInputForPicking.value = val;
+                    activeInputForPicking.dispatchEvent(new Event('input'));
+                }
+            }
 
             async function fetchSettings() {
                 try {
@@ -1412,8 +1462,18 @@
                         <tbody>
                             ${scalarResults.map(r => `
                                 <tr>
-                                    <td style="font-weight: 500;">${r.name || r.oid}</td>
-                                    <td>${r.value}</td>
+                                    <td style="font-weight: 500;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                                            <span>${r.name || r.oid}</span>
+                                            <button class="pick-btn" onclick="pickValue('${(r.name || r.oid).replace(/'/g, "\\'")}')" title="Pick Name/OID">Key</button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                                            <span>${r.value}</span>
+                                            <button class="pick-btn" onclick="pickValue('${String(r.value).replace(/'/g, "\\'")}')" title="Pick Value">Val</button>
+                                        </div>
+                                    </td>
                                     <td style="color: var(--text-muted); font-size: 0.75rem;">${r.description || translations[currentLang].no_desc_label}</td>
                                 </tr>
                             `).join('')}
@@ -1508,7 +1568,14 @@
                         const tr = document.createElement('tr');
                         let html = `<td>${row.index}</td>`;
                         displayColumns.forEach(col => {
-                            html += `<td>${row[col] || '-'}</td>`;
+                            const val = row[col] || '-';
+                            html += `
+                                    <td>
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
+                                            <span>${val}</span>
+                                            ${val !== '-' ? `<button class="pick-btn" onclick="pickValue('${String(val).replace(/'/g, "\\'")}')" title="Pick Value">Val</button>` : ''}
+                                        </div>
+                                    </td>`;
                         });
                         tr.innerHTML = html;
                         tbody.appendChild(tr);
