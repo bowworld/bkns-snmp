@@ -287,6 +287,37 @@
             opacity: 0.7;
         }
 
+        .table-mapping-card {
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            background: #fafafa;
+        }
+
+        .mapping-columns-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .mapping-column-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: white;
+            padding: 0.5rem;
+        }
+
+        .column-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.25rem 0;
+            font-size: 0.85rem;
+        }
+
         .tables-container {
             display: grid;
             gap: 2rem;
@@ -705,12 +736,24 @@
                         <button id="addTagBtn" class="btn-secondary">+ Add Tag</button>
                     </div>
                     <div class="settings-group">
-                        <h3 data-i18n="lp_fields">Fields</h3>
+                        <h3 data-i18n="lp_fields">Fields (Scalars)</h3>
                         <div id="fieldsContainer"
                             style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
                             <!-- Fields will be rendered here -->
                         </div>
-                        <button id="addFieldBtn" class="btn-secondary">+ Add Field</button>
+                        <button id="addFieldBtn" class="btn-secondary">+ Add Scalar Field</button>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 data-i18n="lp_table_mappings">Table Mappings</h3>
+                        <div id="tableMappingsContainer"
+                            style="display: flex; flex-direction: column; gap: 1.5rem; margin-bottom: 1rem;">
+                            <!-- Table mappings will be rendered here -->
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;"
+                            data-i18n="std_practice_desc">
+                            Mapping entire tables: pick a column as a Tag to identify rows, and other columns as Fields.
+                        </p>
                     </div>
 
                     <div class="settings-group">
@@ -858,7 +901,12 @@
                     lp_preview: "Line Protocol Preview",
                     save_btn: "Save",
                     lp_tags: "Tags",
-                    lp_fields: "Fields"
+                    lp_fields: "Fields (Scalars)",
+                    lp_table_mappings: "Table Mappings",
+                    map_table_btn: "Map Whole Table",
+                    select_tags: "Select Tags (Identifiers)",
+                    standard_practice: "Standard Practice:",
+                    std_practice_desc: "Use name/descr columns as Tags, and status/numeric columns as Fields."
                 },
                 ru: {
                     title: "SNMP Просмотрщик",
@@ -910,7 +958,12 @@
                     lp_preview: "Предпросмотр Line Protocol",
                     save_btn: "Сохранить",
                     lp_tags: "Теги (Tags)",
-                    lp_fields: "Поля (Fields)"
+                    lp_fields: "Поля (Скалярные)",
+                    lp_table_mappings: "Маппинг таблиц",
+                    map_table_btn: "Маппить таблицу целиком",
+                    select_tags: "Выберите Теги (Идентификаторы)",
+                    standard_practice: "Стандартная практика:",
+                    std_practice_desc: "Используйте колонки с именами/описанием как Теги, а числовые данные — как Поля."
                 },
                 kk: {
                     title: "SNMP Көруші",
@@ -962,7 +1015,12 @@
                     lp_preview: "Line Protocol алдын ала қарау",
                     save_btn: "Сақтау",
                     lp_tags: "Тегтер (Tags)",
-                    lp_fields: "Өрістер (Fields)"
+                    lp_fields: "Өрістер (Скалярлы)",
+                    lp_table_mappings: "Кестелерді сәйкестендіру",
+                    map_table_btn: "Кестені толығымен сәйкестендіру",
+                    select_tags: "Тегтерді таңдаңыз (Идентификаторлар)",
+                    standard_practice: "Стандартты практика:",
+                    std_practice_desc: "Аты/сипаттамасы бар бағандарды Тег ретінде, ал сандық деректерді Өріс ретінде пайдаланыңыз."
                 },
             };
 
@@ -1140,7 +1198,84 @@
                 const fieldsHtml = `<span style="color: #10b981">${fieldsStr}</span>`;
                 const timestampHtml = `<span style="color: #eab308"> 1623456789000000000</span>`;
 
-                lpPreview.innerHTML = `${measurementHtml}${tagsHtml}${fieldsHtml}${timestampHtml}`;
+                let fullPreview = `${measurementHtml}${tagsHtml}${fieldsHtml}${timestampHtml}`;
+
+                // Process Table Mappings
+                const tableMappingsCards = document.querySelectorAll('.table-mapping-card');
+                if (tableMappingsCards.length > 0) {
+                    fullPreview += '\n\n# Table Mappings Preview:\n';
+
+                    tableMappingsCards.forEach(card => {
+                        const tableOid = card.dataset.tableOid;
+                        const tagColumns = [];
+                        card.querySelectorAll('.tag-col-checkbox:checked').forEach(cb => tagColumns.push(cb.value));
+                        const fieldColumns = [];
+                        card.querySelectorAll('.field-col-checkbox:checked').forEach(cb => fieldColumns.push(cb.value));
+
+                        if (tagColumns.length === 0 && fieldColumns.length === 0) return;
+
+                        // Try to get data for this table from last scan
+                        let tableData = null;
+                        if (lastScanData && lastScanData.tables) {
+                            tableData = lastScanData.tables.find(t => t.tableOid === tableOid);
+                        }
+
+                        // Show up to 2 sample rows
+                        const rowsToShow = tableData ? tableData.rows.slice(0, 2) : [{ index: '1' }, { index: '2' }];
+
+                        rowsToShow.forEach(row => {
+                            let rowTagsStr = tagsStr; // Base tags
+
+                            // Add table tags
+                            tagColumns.forEach(colId => {
+                                const colName = (tableData && tableData.columnNames) ? tableData.columnNames[colId] : `col${colId}`;
+                                let val = row[colId] !== undefined ? row[colId] : `val${colId}`;
+                                rowTagsStr += `,${colName}=${String(val).replace(/ /g, '\\ ')}`;
+                            });
+
+                            let rowFieldsStr = '';
+
+                            // Add table fields
+                            const rowFieldPairs = [];
+                            fieldColumns.forEach(colId => {
+                                const colName = (tableData && tableData.columnNames) ? tableData.columnNames[colId] : `col${colId}`;
+                                let val = row[colId] !== undefined ? row[colId] : '42.0';
+
+                                // Clean up value (remove quotes if numeric)
+                                let cleanVal = val;
+                                // Basic heuristic: if it looks like a number, treat as number. Else quote.
+                                // In Line Protocol, strings must be quoted.
+                                if (!/^-?\d+(\.\d+)?(i|u)?$/.test(val)) {
+                                    // If not strictly numeric, check if it's a known numeric type or force quote
+                                    // For preview, let's keep it simple.
+                                    // If it contains non-numeric chars (except .), quote it.
+                                    if (/[^0-9.-]/.test(val)) {
+                                        cleanVal = `"${val}"`;
+                                    }
+                                }
+
+                                rowFieldPairs.push(`${colName}=${cleanVal}`);
+                            });
+
+                            if (rowFieldPairs.length > 0) {
+                                rowFieldsStr = ' ' + rowFieldPairs.join(',');
+                            } else if (fieldPairs.length > 0) {
+                                // If no table fields selected, but we have global fields? 
+                                // Usually table rows should have their own fields.
+                                // But maybe we want to attach global stats to every row? Rare.
+                                rowFieldsStr = fieldsStr;
+                            }
+
+                            if (rowTagsStr && rowFieldsStr) {
+                                const rTagsHtml = `<span style="color: #ef4444">${rowTagsStr}</span>`;
+                                const rFieldsHtml = `<span style="color: #10b981">${rowFieldsStr}</span>`;
+                                fullPreview += `${measurementHtml}${rTagsHtml}${rFieldsHtml}${timestampHtml}\n`;
+                            }
+                        });
+                    });
+                }
+
+                lpPreview.innerHTML = fullPreview;
             }
 
             function createTagRow(key = '', value = '') {
@@ -1187,6 +1322,7 @@
             function createFieldRow(key = '', value = '') {
                 const row = document.createElement('div');
                 row.className = 'field-row';
+                row.dataset.key = key;
                 row.style.display = 'flex';
                 row.style.gap = '0.5rem';
                 row.style.alignItems = 'center';
@@ -1200,23 +1336,96 @@
                     </button>
                 `;
 
-                row.querySelectorAll('input').forEach(input => {
-                    input.addEventListener('input', updateLineProtocolPreview);
-                    input.addEventListener('focus', () => {
-                        if (activeInputForPicking) {
-                            activeInputForPicking.classList.remove('active-input-highlight');
-                        }
-                        activeInputForPicking = input;
-                        activeInputForPicking.classList.add('active-input-highlight');
-                    });
-                });
-
+                row.querySelector('.field-key').addEventListener('input', updateLineProtocolPreview);
+                row.querySelector('.field-val').addEventListener('input', updateLineProtocolPreview);
                 row.querySelector('.delete-field-btn').addEventListener('click', () => {
                     row.remove();
                     updateLineProtocolPreview();
                 });
 
                 fieldsContainer.appendChild(row);
+            }
+
+            function createTableMappingRow(tableInfo, selectedTags = [], selectedFields = []) {
+                const tableOid = tableInfo.tableOid;
+                const tableName = tableInfo.tableName || tableOid;
+
+                // Check if already exists
+                const existing = document.querySelector(`.table-mapping-card[data-table-oid="${tableOid}"]`);
+                if (existing) {
+                    existing.scrollIntoView({ behavior: 'smooth' });
+                    return;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'table-mapping-card';
+                card.dataset.tableOid = tableOid;
+                card.dataset.tableName = tableName;
+
+                let columnsHtml = '';
+                tableInfo.columns.forEach(colId => {
+                    const name = (tableInfo.columnNames && tableInfo.columnNames[colId]) ? tableInfo.columnNames[colId] : `Col ${colId}`;
+                    const isTag = selectedTags.includes(String(colId));
+                    const isField = selectedFields.includes(String(colId));
+
+                    columnsHtml += `
+                        <div class="column-item">
+                            <div style="flex: 1; font-weight: 500;">${name}</div>
+                            <label style="font-size: 0.75rem; color: #ef4444;"><input type="checkbox" class="tag-col-checkbox" value="${colId}" ${isTag ? 'checked' : ''}> Tag</label>
+                            <label style="font-size: 0.75rem; color: #10b981;"><input type="checkbox" class="field-col-checkbox" value="${colId}" ${isField ? 'checked' : ''}> Field</label>
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                        <div>
+                            <div style="font-weight: 600; font-size: 1rem; color: var(--primary);">${tableName}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">${tableOid}</div>
+                        </div>
+                        <button class="delete-mapping-btn" style="background: none; border: none; color: #ef4444; cursor: pointer; padding: 4px;">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="mapping-columns-grid">
+                        <div>
+                            <div style="font-size: 0.8rem; font-weight: 600; color: #ef4444; margin-bottom: 4px;" data-i18n="select_tags">Select Tags (Identifiers)</div>
+                            <div class="mapping-column-list">
+                                ${columnsHtml}
+                            </div>
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted); padding: 1rem; background: #fff; border: 1px dashed #ddd; border-radius: 4px;">
+                            <p><strong data-i18n="standard_practice">Standard Practice:</strong></p>
+                            <p data-i18n="std_practice_desc">Use name/descr columns as <b>Tags</b>, and status/numeric columns as <b>Fields</b>.</p>
+                        </div>
+                    </div>
+                `;
+
+                // Add event listeners to checkboxes
+                card.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                    cb.addEventListener('change', updateLineProtocolPreview);
+                });
+
+                card.querySelector('.delete-mapping-btn').addEventListener('click', () => {
+                    card.remove();
+                    updateLineProtocolPreview();
+                });
+
+                tableMappingsContainer.appendChild(card);
+            }
+
+            function pickTable(tableOid) {
+                if (!lastScanData || !lastScanData.tables) return;
+                const tableInfo = lastScanData.tables.find(t => t.tableOid === tableOid);
+                if (tableInfo) {
+                    createTableMappingRow(tableInfo);
+                    switchTab('protocol-tab');
+
+                    // Highlight the table mappings section
+                    tableMappingsContainer.scrollIntoView({ behavior: 'smooth' });
+                }
             }
 
             addFieldBtn.addEventListener('click', () => {
@@ -1278,6 +1487,17 @@
                         createFieldRow('temp_c', '1.3.6.1.4.1.999.1.1');
                         createFieldRow('load_pct', '1.3.6.1.4.1.999.1.2');
                     }
+                    tableMappingsContainer.innerHTML = '';
+                    if (settings.tableMappings && Array.isArray(settings.tableMappings)) {
+                        window.savedTableMappings = settings.tableMappings;
+                        // If we already have scan data, render them
+                        if (lastScanData && lastScanData.tables) {
+                            settings.tableMappings.forEach(m => {
+                                const info = lastScanData.tables.find(t => t.tableOid === m.tableOid);
+                                if (info) createTableMappingRow(info, m.tagColumns, m.fieldColumns);
+                            });
+                        }
+                    }
                     updateLineProtocolPreview();
                 } catch (err) {
                     console.error('Failed to fetch settings:', err);
@@ -1304,17 +1524,34 @@
                     }
                 });
 
+                const tableMappings = [];
+                document.querySelectorAll('.table-mapping-card').forEach(card => {
+                    const tableOid = card.dataset.tableOid;
+                    const tableName = card.dataset.tableName;
+                    const tagColumns = [];
+                    card.querySelectorAll('.tag-col-checkbox:checked').forEach(cb => tagColumns.push(cb.value));
+                    const fieldColumns = [];
+                    card.querySelectorAll('.field-col-checkbox:checked').forEach(cb => fieldColumns.push(cb.value));
+
+                    if (tagColumns.length > 0 || fieldColumns.length > 0) {
+                        tableMappings.push({ tableOid, tableName, tagColumns, fieldColumns });
+                    }
+                });
+
                 saveLpSettingsBtn.disabled = true;
                 try {
                     const res = await fetch('/api/settings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ measurement, tags, fields })
+                        body: JSON.stringify({ measurement, tags, fields, tableMappings })
                     });
                     if (res.ok) {
                         const originalText = saveLpSettingsBtn.textContent;
                         saveLpSettingsBtn.textContent = 'Saved!';
                         saveLpSettingsBtn.classList.add('btn-success');
+
+                        // Update preview immediately with current UI state
+                        updateLineProtocolPreview();
 
                         setTimeout(() => {
                             saveLpSettingsBtn.textContent = originalText;
@@ -1656,6 +1893,14 @@
 
                 totalSections += tables.length;
 
+                // Sync with saved mappings if any
+                if (window.savedTableMappings) {
+                    window.savedTableMappings.forEach(m => {
+                        const info = tables.find(t => t.tableOid === m.tableOid);
+                        if (info) createTableMappingRow(info, m.tagColumns, m.fieldColumns);
+                    });
+                }
+
                 tables.forEach(table => {
                     // Skip table if it doesn't match search
                     if (!tableMatchesSearch(table)) return;
@@ -1681,7 +1926,10 @@
 
                     const header = document.createElement('div');
                     header.className = 'card-header';
-                    header.innerHTML = `<h2>${translations[currentLang].data_group}: ${table.oid}</h2>`;
+                    header.innerHTML = `
+                        <h2>${translations[currentLang].data_group}: ${table.oid}</h2>
+                        <button class="pick-field-btn" onclick="pickTable('${table.tableOid}')" style="padding: 0.5rem 1rem;" data-i18n="map_table_btn">${translations[currentLang].map_table_btn}</button>
+                    `;
                     card.appendChild(header);
 
                     const topScrollWrapper = document.createElement('div');

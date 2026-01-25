@@ -141,6 +141,9 @@ app.post('/api/settings', (req, res) => {
     if (req.body.fields && Array.isArray(req.body.fields)) {
         settings.fields = req.body.fields;
     }
+    if (req.body.tableMappings && Array.isArray(req.body.tableMappings)) {
+        settings.tableMappings = req.body.tableMappings;
+    }
     saveSettings(settings);
     res.json({ message: 'Settings saved' });
 });
