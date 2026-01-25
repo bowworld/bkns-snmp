@@ -601,13 +601,23 @@
                                 <div id="searchInfo" style="margin-top: 0.5rem; font-size: 0.875rem; color: #64748b;">
                                 </div>
                             </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <button id="downloadTxtBtn" data-i18n="download_txt"
-                                    style="background-color: #64748b; padding: 0.5rem 1rem; font-size: 0.875rem;">Download
-                                    TXT</button>
-                                <button id="downloadCsvBtn" data-i18n="download_csv"
-                                    style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download
-                                    CSV</button>
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                    <button id="downloadTxtBtn" data-i18n="download_txt"
+                                        style="background-color: #64748b; padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+                                        TXT</button>
+                                    <button id="downloadCsvBtn" data-i18n="download_csv"
+                                        style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download
+                                        CSV</button>
+                                </div>
+                                <div
+                                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: white;">
+                                    <input type="checkbox" id="hideNoDesc"
+                                        style="width: 1.1rem; height: 1.1rem; cursor: pointer;">
+                                    <label for="hideNoDesc" data-i18n="hide_no_desc"
+                                        style="cursor: pointer; font-size: 0.875rem; font-weight: 500; white-space: nowrap;">Hide
+                                        metrics without description</label>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -650,16 +660,6 @@
                                 <input type="radio" name="language" value="kk" onclick="changeLanguage('kk')">
                                 <span style="font-weight: 500;">Қазақша</span>
                             </label>
-                        </div>
-                    </div>
-
-                    <div class="settings-group">
-                        <h3 data-i18n="display_settings">Display Settings</h3>
-                        <div
-                            style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px;">
-                            <input type="checkbox" id="hideNoDesc" style="width: 1.2rem; height: 1.2rem;">
-                            <label for="hideNoDesc" data-i18n="hide_no_desc"
-                                style="cursor: pointer; font-weight: 500;">Hide metrics without description</label>
                         </div>
                     </div>
                 </div>
@@ -762,8 +762,7 @@
                     tab_snmp: "SNMP Settings",
                     tab_protocol: "Line Protocol",
                     tab_general: "General Settings",
-                    tab_about: "About",
-                    display_settings: "Display Settings"
+                    tab_about: "About"
                 },
                 ru: {
                     title: "SNMP Просмотрщик",
@@ -810,8 +809,7 @@
                     tab_snmp: "SNMP Настройки",
                     tab_protocol: "Line Protocol",
                     tab_general: "Общие настройки",
-                    tab_about: "О проекте",
-                    display_settings: "Настройки отображения"
+                    tab_about: "О проекте"
                 },
                 kk: {
                     title: "SNMP Көруші",
@@ -858,8 +856,7 @@
                     tab_snmp: "SNMP Параметрлері",
                     tab_protocol: "Line Protocol",
                     tab_general: "Жалпы параметрлер",
-                    tab_about: "Жоба туралы",
-                    display_settings: "Көрсету параметрлері"
+                    tab_about: "Жоба туралы"
                 }
             };
 
