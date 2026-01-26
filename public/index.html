@@ -627,8 +627,8 @@
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <h3 data-i18n="mibs_header">MIB Files</h3>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <input type="file" id="mibUploadInput" style="display: none;"
-                                        accept=".txt,.mib,.my">
+                                    <input type="file" id="mibUploadInput" style="display: none;" accept=".txt,.mib,.my"
+                                        multiple>
                                     <button id="uploadMibBtn" class="btn-secondary" data-i18n="upload_btn"
                                         onclick="document.getElementById('mibUploadInput').click()">+ Upload</button>
                                     <button id="deleteMibBtn" class="btn-secondary" data-i18n="delete_btn"
@@ -859,7 +859,7 @@
                     language_label: "Language",
                     hide_no_desc: "Hide metrics without description",
                     target_ip_placeholder: "Target IP (e.g., 192.168.2.1)",
-                    root_oid_placeholder: "Root OID (Optional)",
+                    root_oid_placeholder: "Root OID (Default: 1.3.6)",
                     community_placeholder: "Community",
                     snmp_v_select: "Select SNMP Version...",
                     scan_btn: "Scan Device",
@@ -916,7 +916,7 @@
                     language_label: "Язык",
                     hide_no_desc: "Скрыть метрики без описания",
                     target_ip_placeholder: "Целевой IP (например, 192.168.2.1)",
-                    root_oid_placeholder: "Корневой OID (необязательно)",
+                    root_oid_placeholder: "Корневой OID (По умолчанию: 1.3.6)",
                     community_placeholder: "Сообщество (Community)",
                     snmp_v_select: "Выберите версию SNMP...",
                     scan_btn: "Сканировать устройство",
@@ -973,7 +973,7 @@
                     language_label: "Тіл",
                     hide_no_desc: "Сипаттамасы жоқ метрикаларды жасыру",
                     target_ip_placeholder: "Мақсатты IP (мысалы, 192.168.2.1)",
-                    root_oid_placeholder: "Түбірлік OID (міндетті емес)",
+                    root_oid_placeholder: "Түбірлік OID (Әдепкі: 1.3.6)",
                     community_placeholder: "Қауымдастық (Community)",
                     snmp_v_select: "SNMP нұсқасын таңдаңыз...",
                     scan_btn: "Құрылғыны сканерлеу",
@@ -1576,25 +1576,39 @@
             fetchMibs();
 
             mibUploadInput.addEventListener('change', async (e) => {
-                if (e.target.files.length > 0) {
-                    const file = e.target.files[0];
+                const files = e.target.files;
+                if (files.length > 0) {
                     const formData = new FormData();
-                    formData.append('mibFile', file);
+                    for (let i = 0; i < files.length; i++) {
+                        formData.append('mibFiles', files[i]);
+                    }
 
                     try {
                         const res = await fetch('/api/upload-mib', {
                             method: 'POST',
                             body: formData
                         });
-                        if (res.ok) {
-                            fetchMibs(); // Refresh list
+
+                        let errorMessage = 'Unknown error';
+                        const contentType = res.headers.get("content-type");
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            const data = await res.json();
+                            if (res.ok) {
+                                fetchMibs(); // Refresh list
+                                return;
+                            }
+                            errorMessage = data.error || errorMessage;
                         } else {
-                            const err = await res.json();
-                            alert(translations[currentLang].upload_failed + err.error);
+                            errorMessage = await res.text();
+                            // If it's a long HTML page, just show the status
+                            if (errorMessage.includes('<!DOCTYPE')) {
+                                errorMessage = `Server Error (${res.status}): ${res.statusText}`;
+                            }
                         }
+                        alert((translations[currentLang].upload_failed || 'Upload failed: ') + errorMessage);
                     } catch (error) {
                         console.error('Upload error:', error);
-                        alert(translations[currentLang].upload_failed);
+                        alert((translations[currentLang].upload_failed || 'Upload failed: ') + error.message);
                     }
                     // Reset input
                     e.target.value = '';

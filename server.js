@@ -62,6 +62,13 @@ function saveSettings(settings) {
 // Initialize MIB library
 const mibManager = new MibManager(mibsDir);
 
+// Pre-load all available MIBs so they are available for translation immediately
+const availableMibs = mibManager.getMibFiles();
+if (availableMibs.length > 0) {
+    console.log(`Pre-loading ${availableMibs.length} MIB files...`);
+    mibManager.loadMibs(availableMibs);
+}
+
 // Configure multer
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -92,12 +99,12 @@ app.get('/api/mibs', (req, res) => {
 });
 
 // API: Upload MIB
-app.post('/api/upload-mib', upload.single('mibFile'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
+app.post('/api/upload-mib', upload.array('mibFiles'), (req, res) => {
+    if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ error: 'No files uploaded' });
     }
-    // We could try to load/validate it here, but for now just acknowledge receipt
-    res.json({ message: 'File uploaded successfully', filename: req.file.filename });
+    const filenames = req.files.map(f => f.filename);
+    res.json({ message: `${filenames.length} files uploaded successfully`, filenames });
 });
 
 // API: Delete MIBs
@@ -148,22 +155,43 @@ app.post('/api/settings', (req, res) => {
     res.json({ message: 'Settings saved' });
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+    if (err instanceof multer.MulterError) {
+        // A Multer error occurred when uploading.
+        return res.status(400).json({ error: 'Upload error: ' + err.message });
+    } else if (err) {
+        // An unknown error occurred.
+        return res.status(500).json({ error: err.message });
+    }
+    next();
+});
+
 app.get('/api/snmp-walk', (req, res) => {
     const target = req.query.target || '192.168.2.1';
-    const rootOid = req.query.oid || '1.3.6.1.2.1'; // Default IP-MIB
+    let rootOid = req.query.oid || '1.3.6'; // Default to Internet branch (includes MIB-2 and Enterprises)
     const selectedMibs = req.query.mibs ? req.query.mibs.split(',') : [];
 
-    // SNMP Version and Parameters
-    const versionStr = req.query.version || '1';
-    let version = snmp.Version1;
-    if (versionStr === '2c') version = snmp.Version2c;
-    // v3 is handled separately via createV3Session
+    // Sanitize OID (remove leading/trailing dots and spaces)
+    rootOid = rootOid.trim().replace(/^\./, '').replace(/\.$/, '');
 
     // Load selected MIBs
     if (selectedMibs.length > 0) {
         const loadResult = mibManager.loadMibs(selectedMibs);
         console.log('MIB Load Result:', loadResult);
+
+        // Try to resolve symbolic name if provided
+        const originalOid = rootOid;
+        rootOid = mibManager.resolveSymbol(rootOid);
+        console.log(`Resolved OID: ${originalOid} -> ${rootOid}`);
     }
+
+    // SNMP Version and Parameters
+    const versionStr = req.query.version || '1';
+    let version = snmp.Version1;
+    if (versionStr === '2c') version = snmp.Version2c;
+
+    console.log(`Starting walk for ${target} with rootOid: ${rootOid}, version: ${versionStr}`);
 
     let session;
     try {
@@ -210,8 +238,12 @@ app.get('/api/snmp-walk', (req, res) => {
                     value: varbinds[i].value.toString()
                 };
 
-                // Enrich with MIB data if available
-                const mibInfo = mibManager.lookupOid(vb.oid, selectedMibs);
+                // Enrich with MIB data if available - try raw OID and with .0 for scalars
+                let mibInfo = mibManager.lookupOid(vb.oid);
+                if (!mibInfo) {
+                    mibInfo = mibManager.lookupOid(vb.oid + '.0');
+                }
+
                 if (mibInfo) {
                     vb.name = mibInfo.name;
                     vb.description = mibInfo.description;
