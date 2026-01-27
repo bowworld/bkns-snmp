@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SNMP Viewer is a web-based tool for visually exploring and managing data from network equipment via the SNMP protocol. It provides an interface for scanning devices, viewing OID trees, and managing MIB files. The tool maps hardware parameters into JSON format compatible with Telegraf for storage in InfluxDB.
+SNMP Viewer is a web-based tool for visually exploring and managing data from network equipment via the SNMP protocol. It provides an interface for scanning devices, viewing OID trees, and managing MIB files. The tool maps hardware parameters into TOML format compatible with Telegraf for storage in InfluxDB.
 
 ## Tech Stack
 
@@ -79,11 +79,11 @@ docker compose up -d --build
 2. Server performs SNMP subtree walk
 3. Results enriched with MIB metadata (names, descriptions, enums)
 4. Data grouped into tables for display
-5. Can export to CSV/TXT or generate Telegraf JSON config
+5. Can export to CSV/TXT or generate Telegraf TOML config
 
 ## InfluxDB Integration Context
 
-The tool produces JSON configurations for Telegraf with:
+The tool produces TOML configurations for Telegraf with:
 - **Measurement**: Equipment class (ups, pdu, cooling, etc.)
 - **Tags**: `device_sn` (serial number), `metric` (parameter name)
 - **Fields**: Numeric values stored raw; text/events converted to 0/1

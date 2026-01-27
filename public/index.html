@@ -1033,8 +1033,8 @@
                             <input type="text" id="lpMeasurement" placeholder="e.g., snmp" value="snmp"
                                 style="flex: 1; color: #3b82f6; font-weight: 500;">
                             <button id="saveLpSettingsBtn" data-i18n="save_btn">Save</button>
-                            <button id="downloadLpJsonBtn" data-i18n="download_json" class="btn-secondary">Download
-                                JSON</button>
+                            <button id="downloadLpTomlBtn" data-i18n="download_toml" class="btn-secondary">Download
+                                TOML</button>
                         </div>
                     </div>
 
@@ -1156,7 +1156,7 @@
             const addTagBtn = document.getElementById('addTagBtn');
             const fieldsContainer = document.getElementById('fieldsContainer');
             const addFieldBtn = document.getElementById('addFieldBtn');
-            const downloadLpJsonBtn = document.getElementById('downloadLpJsonBtn');
+            const downloadLpTomlBtn = document.getElementById('downloadLpTomlBtn');
             const snmpStatusBar = document.getElementById('snmpStatusBar');
             const totalOidsCount = document.getElementById('totalOidsCount');
             const displayedOidsCount = document.getElementById('displayedOidsCount');
@@ -1222,7 +1222,7 @@
                     select_tags: "Select Tags (Identifiers)",
                     standard_practice: "Standard Practice:",
                     std_practice_desc: "Use name/descr columns as Tags, and status/numeric columns as Fields.",
-                    download_json: "Download JSON",
+                    download_toml: "Download TOML",
                     total_oids: "Total OIDs polled",
                     displayed_oids: "Displayed OIDs",
                     mib_browser_title: "MIB Browser",
@@ -1291,7 +1291,7 @@
                     select_tags: "Выберите Теги (Идентификаторы)",
                     standard_practice: "Стандартная практика:",
                     std_practice_desc: "Используйте колонки с именами/описанием как Теги, а числовые данные — как Поля.",
-                    download_json: "Скачать JSON",
+                    download_toml: "Скачать TOML",
                     total_oids: "Всего OID опрошено",
                     displayed_oids: "Отображаемых OID",
                     mib_browser_title: "MIB браузер",
@@ -1360,7 +1360,7 @@
                     select_tags: "Тегтерді таңдаңыз (Идентификаторлар)",
                     standard_practice: "Стандартты практика:",
                     std_practice_desc: "Аты/сипаттамасы бар бағандарды Тег ретінде, ал сандық деректерді Өріс ретінде пайдаланыңыз.",
-                    download_json: "JSON жүктеу",
+                    download_toml: "TOML жүктеу",
                     total_oids: "Барлығы OID сұралды",
                     displayed_oids: "Көрсетілген OID",
                     mib_browser_title: "MIB браузері",
@@ -1927,7 +1927,105 @@
                 }
             });
 
-            downloadLpJsonBtn.addEventListener('click', () => {
+            function generateTelegrafToml(config) {
+                let lines = [];
+                lines.push('[[inputs.snmp]]');
+
+                // Agents
+                const agents = config.agents.map(a => `"${a}"`).join(', ');
+                lines.push(`  agents = [ ${agents} ]`);
+
+                // SNMP Version
+                let version = 2;
+                if (config.snmp_version === '1') version = 1;
+                if (config.snmp_version === '3') version = 3;
+                lines.push(`  version = ${version}`);
+
+                // Community or V3
+                if (version === 3) {
+                    if (config.v3) {
+                        lines.push(`  sec_name = "${config.v3.user || 'user'}"`);
+                        if (config.v3.authProto && config.v3.authProto !== 'none') {
+                            lines.push(`  auth_protocol = "${config.v3.authProto}"`);
+                            lines.push(`  auth_password = "${config.v3.authPwd}"`);
+
+                            if (config.v3.privProto && config.v3.privProto !== 'none') {
+                                lines.push(`  sec_level = "authPriv"`);
+                                lines.push(`  priv_protocol = "${config.v3.privProto}"`);
+                                lines.push(`  priv_password = "${config.v3.privPwd}"`);
+                            } else {
+                                lines.push(`  sec_level = "authNoPriv"`);
+                            }
+                        } else {
+                            lines.push(`  sec_level = "noAuthNoPriv"`);
+                        }
+                    }
+                } else {
+                    lines.push(`  community = "${config.community || 'public'}"`);
+                }
+
+                // Name (measurement)
+                if (config.measurement) {
+                    lines.push(`  name = "${config.measurement}"`);
+                }
+
+                lines.push('');
+
+                // Global Tags
+                if (config.tags && config.tags.length > 0) {
+                    lines.push('  [inputs.snmp.tags]');
+                    config.tags.forEach(t => {
+                        lines.push(`    ${t.key} = "${t.value}"`);
+                    });
+                    lines.push('');
+                }
+
+                // Scalar Fields
+                if (config.fields && config.fields.length > 0) {
+                    config.fields.forEach(f => {
+                        lines.push('  [[inputs.snmp.field]]');
+                        lines.push(`    name = "${f.key}"`);
+                        lines.push(`    oid = "${f.value}"`);
+                        lines.push('');
+                    });
+                }
+
+                // Table Mappings
+                if (config.tableMappings && config.tableMappings.length > 0) {
+                    config.tableMappings.forEach(m => {
+                        lines.push('  [[inputs.snmp.table]]');
+                        lines.push(`    name = "${m.tableName}"`);
+                        lines.push(`    oid = "${m.tableOid}"`);
+
+                        // Find table info from lastScanData to get column names
+                        const tableInfo = lastScanData && lastScanData.tables ? lastScanData.tables.find(t => t.tableOid === m.tableOid) : null;
+
+                        // Combine tag and field columns
+                        const allCols = [];
+                        m.tagColumns.forEach(cId => allCols.push({ id: cId, isTag: true }));
+                        m.fieldColumns.forEach(cId => {
+                            if (!m.tagColumns.includes(cId)) {
+                                allCols.push({ id: cId, isTag: false });
+                            }
+                        });
+
+                        allCols.forEach(col => {
+                            const colName = (tableInfo && tableInfo.columnNames && tableInfo.columnNames[col.id]) ? tableInfo.columnNames[col.id] : `col_${col.id}`;
+                            lines.push('    [[inputs.snmp.table.field]]');
+                            lines.push(`      name = "${colName}"`);
+                            lines.push(`      oid = "${m.tableOid}.${col.id}"`);
+                            if (col.isTag) {
+                                lines.push(`      is_tag = true`);
+                            }
+                            lines.push('');
+                        });
+                    });
+                }
+
+                return lines.join('\n');
+            }
+
+            downloadLpTomlBtn.addEventListener('click', () => {
                 const measurement = lpMeasurement.value.trim();
                 const tags = [];
                 document.querySelectorAll('.tag-row').forEach(row => {
@@ -1984,11 +2082,13 @@
                     fields,
                     tableMappings
                 };
-                const blob = new Blob([JSON.stringify(config, null, 4)], { type: 'application/json' });
+
+                const tomlString = generateTelegrafToml(config);
+                const blob = new Blob([tomlString], { type: 'text/plain' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `lp_config_${measurement || 'snmp'}.json`;
+                a.download = `telegraf_snmp_${measurement || 'config'}.toml`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

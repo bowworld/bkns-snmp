@@ -9,7 +9,7 @@
 ### Description
 SNMP Viewer is a web-based tool designed for visually exploring and managing data from network equipment via the SNMP protocol. It provides an intuitive interface for scanning devices, viewing OID trees, and managing MIB files.
 
-The tool enables administrators to map hardware parameters (via **SNMP** or **Modbus** protocols) into a standardized **JSON** format, which can then be consumed by **Telegraf** for storage in an **InfluxDB** time-series database.
+The tool enables administrators to map hardware parameters (via **SNMP** or **Modbus** protocols) into a standardized **TOML** format, which can then be consumed by **Telegraf** for storage in an **InfluxDB** time-series database.
 
 ### Key Features
 - **Device Scanning**: Supports SNMP v1, v2c, and v3.
@@ -26,11 +26,11 @@ The tool enables administrators to map hardware parameters (via **SNMP** or **Mo
     *   **Numeric Values:** Integer or Gauge values are stored in their natural (raw) form.
     *   **Text & Events:** Textual states or event notifications are transformed into discrete binary/numeric values (0 and 1) for efficient storage and alerting.
 *   **Metadata & Identity:** Every record in InfluxDB must be associated with the equipment's **Serial Number**. If unavailable, a unique identifying label is used.
-*   **Interoperability:** Produces JSON configurations compatible with Telegraf's input plugins.
+*   **Interoperability:** Produces TOML configurations compatible with Telegraf's input plugins.
 
 ### InfluxDB & Telemetry Format
 *   **Line Protocol Format:** `measurement,tag1=...,tag2=... field=value timestamp`
-*   **JSON Mapping Logic:**
+*   **TOML Mapping Logic:**
     *   **Measurement:** Defines the equipment class (e.g., `ups`, `pdu`, `cooling`).
     *   **Tags:** Includes `device_sn` (Serial Number) and `metric` (parameter name).
 
@@ -47,7 +47,7 @@ The tool enables administrators to map hardware parameters (via **SNMP** or **Mo
 ### Сипаттамасы
 SNMP Viewer — бұл SNMP протоколы арқылы желілік жабдықтан деректерді көрнекі түрде зерттеуге және басқаруға арналған веб-құрал. Ол құрылғыларды сканерлеуге, OID ағаштарын қарауға және MIB файлдарын басқаруға арналған интуитивті интерфейсті ұсынады.
 
-Бұл құрал әкімшілерге аппараттық параметрлерді (**SNMP** немесе **Modbus** хаттамалары арқылы) стандартталған **JSON** форматына сәйкестендіруге мүмкіндік береді. Одан кейін бұл JSON деректерін InfluxDB уақыттық тізбектер дерекқорында сақтау үшін **Telegraf** пайдаланады.
+Бұл құрал әкімшілерге аппараттық параметрлерді (**SNMP** немесе **Modbus** хаттамалары арқылы) стандартталған **TOML** форматына сәйкестендіруге мүмкіндік береді. Одан кейін бұл TOML деректерін InfluxDB уақыттық тізбектер дерекқорында сақтау үшін **Telegraf** пайдаланады.
 
 ### Негізгі мүмкіндіктері
 - **Құрылғыны сканерлеу**: SNMP v1, v2c және v3 нұсқаларын қолдайды.
@@ -64,11 +64,11 @@ SNMP Viewer — бұл SNMP протоколы арқылы желілік жа�
     *   **Сандық мәндер:** Бүтін сан немесе Gauge мәндері табиғи (өңделмеген) түрінде сақталады.
     *   **Мәтін және оқиғалар:** Мәтіндік күйлер немесе оқиғалар туралы хабарландырулар тиімді сақтау және хабарлау үшін дискретті екілік/сандық мәндерге (0 және 1) түрлендіріледі.
 *   **Метадеректер және сәйкестендіру:** InfluxDB-дегі әрбір жазба жабдықтың **сериялық нөмірімен** (Serial Number) байланыстырылуы керек.
-*   **Өзара әрекеттесу мүмкіндігі:** Telegraf-тың кіріс плагиндерімен үйлесімді JSON конфигурацияларын жасайды.
+*   **Өзара әрекеттесу мүмкіндігі:** Telegraf-тың кіріс плагиндерімен үйлесімді TOML конфигурацияларын жасайды.
 
 ### InfluxDB және телеметрия форматы
 *   **Line Protocol форматы:** `measurement,tag1=...,tag2=... field=value timestamp`
-*   **JSON сәйкестендіру (Map) логикасы:**
+*   **TOML сәйкестендіру (Map) логикасы:**
     *   **Measurement (Өлшем):** Жабдық класын анықтайды (мысалы, `ups`, `pdu`, `cooling`). Олар MIB-тің жоғарғы тармақтарынан алынады.
     *   **Tags (Тегтер):** `device_sn` (сериялық нөмір) және `metric` (параметр атауы) міндетті түрде қосылуы керек.
 

@@ -1,6 +1,6 @@
 **Telegraf** and **InfluxDB**.
 
-The tool allows administrators to map hardware parameters (via **SNMP** or **Modbus** protocols) into a standardized **JSON** format. This JSON is then consumed by Telegraf to be stored in the InfluxDB time-series database.
+The tool allows administrators to map hardware parameters (via **SNMP** or **Modbus** protocols) into a standardized **TOML** format. This TOML is then consumed by Telegraf to be stored in the InfluxDB time-series database.
 
 ## Core Objectives & Data Logic
 
@@ -9,7 +9,7 @@ The tool allows administrators to map hardware parameters (via **SNMP** or **Mod
     *   **Numeric Values:** Integer or Gauge values are stored in their natural (raw) form.
     *   **Text & Events:** Textual states or event notifications are transformed into discrete binary/numeric values (0 and 1) for efficient storage and alerting.
 *   **Metadata & Identity:** Every record in InfluxDB must be associated with the equipment's **Serial Number**. If a serial number is unavailable, a unique identifying label must be provided.
-*   **Interoperability:** Produces JSON configurations compatible with Telegraf's input plugins.
+*   **Interoperability:** Produces TOML configurations compatible with Telegraf's input plugins.
 
 ## InfluxDB & Telemetry Format
 
@@ -32,7 +32,7 @@ The tool allows administrators to map hardware parameters (via **SNMP** or **Mod
 
 **Telegraf** және **InfluxDB**.
 
-Бұл құрал әкімшілерге аппараттық параметрлерді (**SNMP** немесе **Modbus** хаттамалары арқылы) стандартталған **JSON** форматына сәйкестендіруге мүмкіндік береді. Одан кейін бұл JSON деректерін InfluxDB уақыттық тізбектер дерекқорында сақтау үшін Telegraf пайдаланады.
+Бұл құрал әкімшілерге аппараттық параметрлерді (**SNMP** немесе **Modbus** хаттамалары арқылы) стандартталған **TOML** форматына сәйкестендіруге мүмкіндік береді. Одан кейін бұл TOML деректерін InfluxDB уақыттық тізбектер дерекқорында сақтау үшін Telegraf пайдаланады.
 
 ## Негізгі мақсаттар және деректер логикасы
 
@@ -41,7 +41,7 @@ The tool allows administrators to map hardware parameters (via **SNMP** or **Mod
     *   **Сандық мәндер:** Бүтін сан немесе Gauge мәндері табиғи (өңделмеген) түрінде сақталады.
     *   **Мәтін және оқиғалар:** Мәтіндік күйлер немесе оқиғалар туралы хабарландырулар тиімді сақтау және хабарлау үшін дискретті екілік/сандық мәндерге (0 және 1) түрлендіріледі.
 *   **Метадеректер және сәйкестендіру:** InfluxDB-дегі әрбір жазба жабдықтың **сериялық нөмірімен** (Serial Number) байланыстырылуы керек. Егер сериялық нөмір болмаса, бірегей сәйкестендіру белгісі көрсетілуі тиіс.
-*   **Өзара әрекеттесу мүмкіндігі:** Telegraf-тың кіріс плагиндерімен үйлесімді JSON конфигурацияларын жасайды.
+*   **Өзара әрекеттесу мүмкіндігі:** Telegraf-тың кіріс плагиндерімен үйлесімді TOML конфигурацияларын жасайды.
 
 ## InfluxDB және телеметрия форматы
 

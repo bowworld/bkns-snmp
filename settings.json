@@ -2,20 +2,27 @@
   "measurement": "snmp",
   "tags": [
     {
-      "key": "sysName",
-      "value": "Keenetic-5282"
+      "key": "ACSC101",
+      "value": "ACSC101"
+    },
+    {
+      "key": "airIRSCUnitIdentSerialNumber",
+      "value": "YK0716110141"
     }
   ],
   "fields": [],
   "tableMappings": [
     {
-      "tableOid": "1.3.6.1.2.1.31.1.1.1",
-      "tableName": "1.3.6.1.2.1.31.1.1.1",
+      "tableOid": "1.3.6.1.4.1.318.1.4.2.6.1",
+      "tableName": "1.3.6.1.4.1.318.1.4.2.6.1",
       "tagColumns": [
         "1"
       ],
       "fieldColumns": [
-        "2"
+        "2",
+        "3",
+        "4",
+        "5"
       ]
     }
   ]
