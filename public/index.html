@@ -724,6 +724,8 @@
                             <input type="text" id="lpMeasurement" placeholder="e.g., snmp" value="snmp"
                                 style="flex: 1; color: #3b82f6; font-weight: 500;">
                             <button id="saveLpSettingsBtn" data-i18n="save_btn">Save</button>
+                            <button id="downloadLpJsonBtn" data-i18n="download_json" class="btn-secondary">Download
+                                JSON</button>
                         </div>
                     </div>
 
@@ -845,6 +847,7 @@
             const addTagBtn = document.getElementById('addTagBtn');
             const fieldsContainer = document.getElementById('fieldsContainer');
             const addFieldBtn = document.getElementById('addFieldBtn');
+            const downloadLpJsonBtn = document.getElementById('downloadLpJsonBtn');
 
             let lastScanData = null;
             let searchQuery = '';
@@ -906,7 +909,8 @@
                     map_table_btn: "Map Whole Table",
                     select_tags: "Select Tags (Identifiers)",
                     standard_practice: "Standard Practice:",
-                    std_practice_desc: "Use name/descr columns as Tags, and status/numeric columns as Fields."
+                    std_practice_desc: "Use name/descr columns as Tags, and status/numeric columns as Fields.",
+                    download_json: "Download JSON"
                 },
                 ru: {
                     title: "SNMP Просмотрщик",
@@ -963,7 +967,8 @@
                     map_table_btn: "Маппить таблицу целиком",
                     select_tags: "Выберите Теги (Идентификаторы)",
                     standard_practice: "Стандартная практика:",
-                    std_practice_desc: "Используйте колонки с именами/описанием как Теги, а числовые данные — как Поля."
+                    std_practice_desc: "Используйте колонки с именами/описанием как Теги, а числовые данные — как Поля.",
+                    download_json: "Скачать JSON"
                 },
                 kk: {
                     title: "SNMP Көруші",
@@ -1020,8 +1025,9 @@
                     map_table_btn: "Кестені толығымен сәйкестендіру",
                     select_tags: "Тегтерді таңдаңыз (Идентификаторлар)",
                     standard_practice: "Стандартты практика:",
-                    std_practice_desc: "Аты/сипаттамасы бар бағандарды Тег ретінде, ал сандық деректерді Өріс ретінде пайдаланыңыз."
-                },
+                    std_practice_desc: "Аты/сипаттамасы бар бағандарды Тег ретінде, ал сандық деректерді Өріс ретінде пайдаланыңыз.",
+                    download_json: "JSON жүктеу"
+                }
             };
 
             let currentLang = localStorage.getItem('selectedLanguage') || 'en';
@@ -1568,6 +1574,52 @@
                 } finally {
                     saveLpSettingsBtn.disabled = false;
                 }
+            });
+
+            downloadLpJsonBtn.addEventListener('click', () => {
+                const measurement = lpMeasurement.value.trim();
+                const tags = [];
+                document.querySelectorAll('.tag-row').forEach(row => {
+                    const key = row.querySelector('.tag-key').value.trim();
+                    const value = row.querySelector('.tag-val').value.trim();
+                    if (key) {
+                        tags.push({ key, value });
+                    }
+                });
+
+                const fields = [];
+                document.querySelectorAll('.field-row').forEach(row => {
+                    const key = row.querySelector('.field-key').value.trim();
+                    const value = row.querySelector('.field-val').value.trim();
+                    if (key) {
+                        fields.push({ key, value });
+                    }
+                });
+
+                const tableMappings = [];
+                document.querySelectorAll('.table-mapping-card').forEach(card => {
+                    const tableOid = card.dataset.tableOid;
+                    const tableName = card.dataset.tableName;
+                    const tagColumns = [];
+                    card.querySelectorAll('.tag-col-checkbox:checked').forEach(cb => tagColumns.push(cb.value));
+                    const fieldColumns = [];
+                    card.querySelectorAll('.field-col-checkbox:checked').forEach(cb => fieldColumns.push(cb.value));
+
+                    if (tagColumns.length > 0 || fieldColumns.length > 0) {
+                        tableMappings.push({ tableOid, tableName, tagColumns, fieldColumns });
+                    }
+                });
+
+                const config = { measurement, tags, fields, tableMappings };
+                const blob = new Blob([JSON.stringify(config, null, 4)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `lp_config_${measurement || 'snmp'}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
             });
 
             fetchSettings();
