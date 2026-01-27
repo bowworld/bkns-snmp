@@ -1074,6 +1074,32 @@
                                 style="flex: 1; color: #eab308; font-weight: 500; background-color: #f8fafc; cursor: not-allowed; border: 1px solid var(--border);">
                         </div>
                     </div>
+
+                    <div class="settings-group">
+                        <h3 data-i18n="lp_agent_config">[agent] Configuration</h3>
+                        <textarea id="lpAgentConfig"
+                            style="width: 100%; height: 150px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 0.9rem; resize: vertical;">[agent]
+  interval = "10s"
+  round_interval = true
+  metric_batch_size = 1000
+  metric_buffer_limit = 10000
+  collection_jitter = "0s"
+  flush_interval = "10s"
+  flush_jitter = "0s"
+  precision = ""
+  hostname = ""
+  omit_hostname = false</textarea>
+                    </div>
+
+                    <div class="settings-group">
+                        <h3 data-i18n="lp_output_config">[[outputs.influxdb_v2]] Configuration</h3>
+                        <textarea id="lpOutputConfig"
+                            style="width: 100%; height: 120px; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; font-family: monospace; font-size: 0.9rem; resize: vertical;">[[outputs.influxdb_v2]]
+  urls = ["http://influxdb:8086"]
+  token = "my-super-secret-auth-token"
+  organization = "bkns"
+  bucket = "snmp-data"</textarea>
+                    </div>
                 </div>
             </div>
 
@@ -1157,6 +1183,8 @@
             const fieldsContainer = document.getElementById('fieldsContainer');
             const addFieldBtn = document.getElementById('addFieldBtn');
             const downloadLpTomlBtn = document.getElementById('downloadLpTomlBtn');
+            const lpAgentConfig = document.getElementById('lpAgentConfig');
+            const lpOutputConfig = document.getElementById('lpOutputConfig');
             const snmpStatusBar = document.getElementById('snmpStatusBar');
             const totalOidsCount = document.getElementById('totalOidsCount');
             const displayedOidsCount = document.getElementById('displayedOidsCount');
@@ -1223,6 +1251,8 @@
                     standard_practice: "Standard Practice:",
                     std_practice_desc: "Use name/descr columns as Tags, and status/numeric columns as Fields.",
                     download_toml: "Download TOML",
+                    lp_agent_config: "[agent] Configuration",
+                    lp_output_config: "[[outputs.influxdb_v2]] Configuration",
                     total_oids: "Total OIDs polled",
                     displayed_oids: "Displayed OIDs",
                     mib_browser_title: "MIB Browser",
@@ -1292,6 +1322,8 @@
                     standard_practice: "Стандартная практика:",
                     std_practice_desc: "Используйте колонки с именами/описанием как Теги, а числовые данные — как Поля.",
                     download_toml: "Скачать TOML",
+                    lp_agent_config: "Конфигурация [agent]",
+                    lp_output_config: "Конфигурация [[outputs.influxdb_v2]]",
                     total_oids: "Всего OID опрошено",
                     displayed_oids: "Отображаемых OID",
                     mib_browser_title: "MIB браузер",
@@ -1361,6 +1393,8 @@
                     standard_practice: "Стандартты практика:",
                     std_practice_desc: "Аты/сипаттамасы бар бағандарды Тег ретінде, ал сандық деректерді Өріс ретінде пайдаланыңыз.",
                     download_toml: "TOML жүктеу",
+                    lp_agent_config: "[agent] конфигурациясы",
+                    lp_output_config: "[[outputs.influxdb_v2]] конфигурациясы",
                     total_oids: "Барлығы OID сұралды",
                     displayed_oids: "Көрсетілген OID",
                     mib_browser_title: "MIB браузері",
@@ -1855,6 +1889,12 @@
                             });
                         }
                     }
+                    if (settings.agentConfig) {
+                        lpAgentConfig.value = settings.agentConfig;
+                    }
+                    if (settings.outputConfig) {
+                        lpOutputConfig.value = settings.outputConfig;
+                    }
                     updateLineProtocolPreview();
                 } catch (err) {
                     console.error('Failed to fetch settings:', err);
@@ -1900,7 +1940,14 @@
                     const res = await fetch('/api/settings', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ measurement, tags, fields, tableMappings })
+                        body: JSON.stringify({
+                            measurement,
+                            tags,
+                            fields,
+                            tableMappings,
+                            agentConfig: lpAgentConfig.value.trim(),
+                            outputConfig: lpOutputConfig.value.trim()
+                        })
                     });
                     if (res.ok) {
                         const originalText = saveLpSettingsBtn.textContent;
@@ -1929,6 +1976,17 @@
 
             function generateTelegrafToml(config) {
                 let lines = [];
+
+                if (config.agentConfig) {
+                    lines.push(config.agentConfig);
+                    lines.push('');
+                }
+
+                if (config.outputConfig) {
+                    lines.push(config.outputConfig);
+                    lines.push('');
+                }
+
                 lines.push('[[inputs.snmp]]');
 
                 // Agents
@@ -2080,7 +2138,9 @@
                     v3: v3Config,
                     tags,
                     fields,
-                    tableMappings
+                    tableMappings,
+                    agentConfig: lpAgentConfig.value.trim(),
+                    outputConfig: lpOutputConfig.value.trim()
                 };
 
                 const tomlString = generateTelegrafToml(config);
