@@ -1,0 +1,59 @@
+SNMPv2-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+    mgmt, mib-2, Counter32, Integer32, TimeTicks, OBJECT-TYPE, MODULE-IDENTITY, NOTIFICATION-TYPE 
+    FROM SNMPv2-SMI;
+
+snmpMIB MODULE-IDENTITY 
+    LAST-UPDATED "200210160000Z"
+    ORGANIZATION "IETF SNMPv3 Working Group"
+    CONTACT-INFO "WG-email:   snmpv3@lists.tislabs.com"
+    DESCRIPTION "The MIB module for SNMP entities."
+    ::= { snmpModules 1 }
+
+system       OBJECT IDENTIFIER ::= { mib-2 1 }
+snmp         OBJECT IDENTIFIER ::= { mib-2 11 }
+
+sysDescr OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "A textual description of the entity."
+    ::= { system 1 }
+
+sysObjectID OBJECT-TYPE
+    SYNTAX      OBJECT IDENTIFIER
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "The vendor-identification of the network management subsystem contained in the entity."
+    ::= { system 2 }
+
+sysUpTime OBJECT-TYPE
+    SYNTAX      TimeTicks
+    MAX-ACCESS  read-only
+    STATUS      current
+    DESCRIPTION "The time since the network management portion of the system was last re-initialized."
+    ::= { system 3 }
+
+sysContact OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION "The textual identification of the contact person for this managed node."
+    ::= { system 4 }
+
+sysName OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION "An administratively-assigned name for this managed node."
+    ::= { system 5 }
+
+sysLocation OBJECT-TYPE
+    SYNTAX      DisplayString
+    MAX-ACCESS  read-write
+    STATUS      current
+    DESCRIPTION "The physical location of this node (e.g., `telephone closet, 3rd floor')."
+    ::= { system 6 }
+
+END

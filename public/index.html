@@ -220,9 +220,58 @@
         .mib-item {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            padding: 0.25rem 0;
-            font-size: 0.875rem;
+            gap: 0.75rem;
+            padding: 0.4rem 0.5rem;
+            margin-bottom: 0.25rem;
+            background: #f8fafc;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            transition: all 0.2s;
+        }
+
+        .mib-item:hover {
+            border-color: var(--primary);
+            background: #f1f5f9;
+        }
+
+        .status-badge {
+            font-size: 0.6rem;
+            padding: 1px 4px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-badge.inactive {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .mib-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 0.25rem;
+        }
+
+        .btn-mini {
+            padding: 2px 4px;
+            font-size: 0.65rem;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: white;
+            cursor: pointer;
+            color: #64748b;
+        }
+
+        .btn-mini:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #eef2ff;
         }
 
         input[type="text"] {
@@ -549,6 +598,231 @@
             border-radius: 4px;
             border: 2px solid var(--bg);
         }
+
+        .snmp-status-bar {
+            padding: 0.6rem 1.5rem;
+            background: #f8fafc;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            color: #64748b;
+            flex: 0 0 auto;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.02);
+            animation: slideUp 0.3s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .snmp-status-bar .stat-group {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        .snmp-status-bar .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .snmp-status-bar strong {
+            color: var(--text-main);
+            font-weight: 600;
+        }
+
+        .stat-badge {
+            background: #eef2ff;
+            padding: 0.1rem 0.6rem;
+            border-radius: 6px;
+            font-weight: 700;
+            color: var(--primary);
+            border: 1px solid #e0e7ff;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        /* MIB Tree Styles */
+        .mib-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mib-modal-content {
+            background-color: white;
+            padding: 0;
+            border-radius: 16px;
+            width: 80%;
+            max-width: 600px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+            animation: modalFadeIn 0.3s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .mib-modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .mib-modal-header h3 {
+            margin: 0;
+        }
+
+        .mib-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+        }
+
+        .mib-modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+        }
+
+        .mib-tree-item {
+            cursor: pointer;
+            padding: 0.25rem 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mib-tree-content {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: background 0.2s;
+        }
+
+        .mib-tree-content:hover {
+            background: #f1f5f9;
+        }
+
+        .mib-tree-content.selected {
+            background: #eef2ff;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .mib-tree-children {
+            margin-left: 1.5rem;
+            display: none;
+            border-left: 1px dashed #cbd5e1;
+            padding-left: 0.5rem;
+        }
+
+        .mib-tree-children.expanded {
+            display: block;
+        }
+
+        .toggle-icon {
+            width: 16px;
+            height: 16px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+            color: #64748b;
+        }
+
+        .toggle-icon.expanded {
+            transform: rotate(90deg);
+        }
+
+        .oid-badge {
+            font-size: 0.7rem;
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .mib-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .mib-tree-name {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 0.5rem;
+        }
+
+        /* Root OID Combobox-like input */
+        .oid-input-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .oid-browse-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 6px 10px;
+            background: #f1f5f9;
+            border: 1px solid var(--border);
+            color: #64748b;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .oid-browse-btn:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
     </style>
 </head>
 
@@ -567,6 +841,26 @@
             </nav>
         </div>
 
+        <div id="mibModal" class="mib-modal">
+            <div class="mib-modal-content">
+                <div class="mib-modal-header">
+                    <h3 data-i18n="mib_browser_title">MIB Browser</h3>
+                    <button class="btn-secondary" onclick="closeMibBrowser()"
+                        style="padding: 0.25rem 0.5rem;">✕</button>
+                </div>
+                <div style="padding: 1rem; border-bottom: 1px solid var(--border);">
+                    <input type="text" id="mibSearchInput" placeholder="Search MIB objects..." style="width: 100%;">
+                </div>
+                <div id="mibTreeContainer" class="mib-modal-body">
+                    <div style="text-align: center; padding: 2rem; color: #64748b;">Loading MIB tree...</div>
+                </div>
+                <div class="mib-modal-footer">
+                    <button class="btn-secondary" onclick="closeMibBrowser()" data-i18n="cancel_btn">Cancel</button>
+                    <button id="selectOidBtn" data-i18n="select_btn" disabled>Select OID</button>
+                </div>
+            </div>
+        </div>
+
         <div class="tab-content">
             <!-- SNMP Settings Tab -->
             <div id="snmp-tab" class="tab-pane active">
@@ -575,7 +869,11 @@
                         <div class="controls">
                             <input type="text" id="targetIp" placeholder="Target IP (e.g., 192.168.2.1)"
                                 value="192.168.2.1">
-                            <input type="text" id="rootOid" placeholder="Root OID (Optional)" value="1.3.6.1.2.1">
+                            <div class="oid-input-wrapper">
+                                <input type="text" id="rootOid" placeholder="Root OID (Optional)" value="1.3.6.1"
+                                    style="width: 100%;">
+                                <button class="oid-browse-btn" onclick="openMibBrowser()">Browse...</button>
+                            </div>
 
                             <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
                                 <select id="snmpVersion"
@@ -631,9 +929,6 @@
                                         multiple>
                                     <button id="uploadMibBtn" class="btn-secondary" data-i18n="upload_btn"
                                         onclick="document.getElementById('mibUploadInput').click()">+ Upload</button>
-                                    <button id="deleteMibBtn" class="btn-secondary" data-i18n="delete_btn"
-                                        style="display: none; border-color: #ef4444; color: #ef4444;"
-                                        onclick="deleteSelectedMibs()">Delete</button>
                                 </div>
                             </div>
                             <div id="mibList" class="mib-list">
@@ -650,7 +945,8 @@
                         <div class="spinner"></div>
                         <p data-i18n="scanning_text">Scanning device... This may take a few seconds.</p>
                         <button id="stopBtn" data-i18n="stop_btn"
-                            style="background-color: #ef4444; margin-top: 1rem;">Stop &
+                            style="background-color: #ef4444; margin-top: 1rem;">Stop
+                            &
                             Reset
                             Interface</button>
                     </div>
@@ -705,6 +1001,19 @@
                 </div>
 
                 <div id="results" class="tables-container"></div>
+                <div id="snmpStatusBar" class="snmp-status-bar" style="display: none;">
+                    <div class="stat-group">
+                        <div class="stat-item">
+                            <strong data-i18n="total_oids">Total OIDs polled</strong>
+                            <span id="totalOidsCount" class="stat-badge">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <strong data-i18n="displayed_oids">Displayed OIDs</strong>
+                            <span id="displayedOidsCount" class="stat-badge">0</span>
+                        </div>
+                    </div>
+                    <div id="snmpStatusRight" style="font-style: italic; opacity: 0.8;"></div>
+                </div>
             </div>
 
             <!-- Line Protocol Tab -->
@@ -830,7 +1139,7 @@
             const errorBox = document.getElementById('errorBox');
             const mibListDiv = document.getElementById('mibList');
             const mibUploadInput = document.getElementById('mibUploadInput');
-            const deleteMibBtn = document.getElementById('deleteMibBtn');
+
             const downloadTxtBtn = document.getElementById('downloadTxtBtn');
             const downloadCsvBtn = document.getElementById('downloadCsvBtn');
             const stopBtn = document.getElementById('stopBtn');
@@ -848,6 +1157,9 @@
             const fieldsContainer = document.getElementById('fieldsContainer');
             const addFieldBtn = document.getElementById('addFieldBtn');
             const downloadLpJsonBtn = document.getElementById('downloadLpJsonBtn');
+            const snmpStatusBar = document.getElementById('snmpStatusBar');
+            const totalOidsCount = document.getElementById('totalOidsCount');
+            const displayedOidsCount = document.getElementById('displayedOidsCount');
 
             let lastScanData = null;
             let searchQuery = '';
@@ -910,7 +1222,18 @@
                     select_tags: "Select Tags (Identifiers)",
                     standard_practice: "Standard Practice:",
                     std_practice_desc: "Use name/descr columns as Tags, and status/numeric columns as Fields.",
-                    download_json: "Download JSON"
+                    download_json: "Download JSON",
+                    total_oids: "Total OIDs polled",
+                    displayed_oids: "Displayed OIDs",
+                    mib_browser_title: "MIB Browser",
+                    cancel_btn: "Cancel",
+                    select_btn: "Select",
+                    btn_load: "Load",
+                    btn_unload: "Unload",
+                    btn_delete: "Delete",
+                    status_active: "Active",
+                    status_file: "File",
+                    confirm_delete_single: "Are you sure you want to delete this MIB file?"
                 },
                 ru: {
                     title: "SNMP Просмотрщик",
@@ -968,7 +1291,18 @@
                     select_tags: "Выберите Теги (Идентификаторы)",
                     standard_practice: "Стандартная практика:",
                     std_practice_desc: "Используйте колонки с именами/описанием как Теги, а числовые данные — как Поля.",
-                    download_json: "Скачать JSON"
+                    download_json: "Скачать JSON",
+                    total_oids: "Всего OID опрошено",
+                    displayed_oids: "Отображаемых OID",
+                    mib_browser_title: "MIB браузер",
+                    cancel_btn: "Отмена",
+                    select_btn: "Выбрать",
+                    btn_load: "Загрузить",
+                    btn_unload: "Выгрузить",
+                    btn_delete: "Удалить",
+                    status_active: "Активен",
+                    status_file: "Файл",
+                    confirm_delete_single: "Вы действительно хотите удалить этот MIB файл?"
                 },
                 kk: {
                     title: "SNMP Көруші",
@@ -1026,7 +1360,18 @@
                     select_tags: "Тегтерді таңдаңыз (Идентификаторлар)",
                     standard_practice: "Стандартты практика:",
                     std_practice_desc: "Аты/сипаттамасы бар бағандарды Тег ретінде, ал сандық деректерді Өріс ретінде пайдаланыңыз.",
-                    download_json: "JSON жүктеу"
+                    download_json: "JSON жүктеу",
+                    total_oids: "Барлығы OID сұралды",
+                    displayed_oids: "Көрсетілген OID",
+                    mib_browser_title: "MIB браузері",
+                    cancel_btn: "Бас тарту",
+                    select_btn: "Таңдау",
+                    btn_load: "Жүктеу",
+                    btn_unload: "Шығару",
+                    btn_delete: "Жою",
+                    status_active: "Белсенді",
+                    status_file: "Файл",
+                    confirm_delete_single: "Бұл MIB файлын жоюыңызға сенімдісіз бе?"
                 }
             };
 
@@ -1056,6 +1401,12 @@
                 document.getElementById('v3User').placeholder = t.v3_user_placeholder;
                 document.getElementById('v3AuthPwd').placeholder = t.v3_auth_pwd_placeholder;
                 document.getElementById('v3PrivPwd').placeholder = t.v3_priv_pwd_placeholder;
+
+                // Update text for buttons and labels that might change
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-i18n');
+                    if (t[key]) el.textContent = t[key];
+                });
 
                 const snmpVSelect = document.getElementById('snmpVersion');
                 snmpVSelect.options[0].textContent = t.snmp_v_select;
@@ -1647,6 +1998,7 @@
                             const data = await res.json();
                             if (res.ok) {
                                 fetchMibs(); // Refresh list
+                                refreshMibBrowser();
                                 return;
                             }
                             errorMessage = data.error || errorMessage;
@@ -1669,73 +2021,150 @@
 
             async function fetchMibs() {
                 try {
-                    const res = await fetch('/api/mibs');
-                    const files = await res.json();
-                    renderMibList(files);
+                    const filesRes = await fetch('/api/mibs');
+                    const files = filesRes.ok ? await filesRes.json() : [];
+
+                    let activeModules = [];
+                    try {
+                        const activeRes = await fetch('/api/mibs/active');
+                        if (activeRes.ok) activeModules = await activeRes.json();
+                    } catch (e) {
+                        console.error("Failed to fetch active MIBs", e);
+                    }
+
+                    renderMibList(files, activeModules);
                 } catch (err) {
                     console.error("Failed to fetch MIBs", err);
+                    mibListDiv.innerHTML = `<div style="padding: 0.5rem; color: #ef4444; text-align: center;">Error loading MIB list</div>`;
                 }
             }
 
-            function renderMibList(files) {
-                if (files.length === 0) {
-                    mibListDiv.innerHTML = `<div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">${translations[currentLang].no_mibs}</div>`;
-                    deleteMibBtn.style.display = 'none';
+            function renderMibList(files = [], activeModules = []) {
+                if (!Array.isArray(files) || files.length === 0) {
+                    mibListDiv.innerHTML = `<div style="padding: 0.5rem; color: var(--text-muted); text-align: center;">${(translations[currentLang] && translations[currentLang].no_mibs) || 'No MIBs found'}</div>`;
                     return;
                 }
 
+                // Filter out null/undefined files from active list
+                const activeFiles = new Set(activeModules.filter(m => m.file).map(m => m.file));
+                const moduleMap = {};
+                activeModules.forEach(m => {
+                    if (m.file && m.name) moduleMap[m.file] = m.name;
+                });
+
                 mibListDiv.innerHTML = '';
                 files.forEach(file => {
+                    const isActive = activeFiles.has(file);
                     const div = document.createElement('div');
                     div.className = 'mib-item';
+
+                    let actionsHtml = '';
+                    const loadText = translations[currentLang].btn_load || 'Load';
+                    const unloadText = translations[currentLang].btn_unload || 'Unload';
+                    const deleteText = translations[currentLang].btn_delete || 'Delete';
+
+                    if (isActive && moduleMap[file]) {
+                        actionsHtml = `<button class="btn-mini" onclick="unloadMib('${moduleMap[file]}')">${unloadText}</button>`;
+                    } else {
+                        actionsHtml = `<button class="btn-mini btn-success" style="color: white; border: none;" onclick="loadMib('${file}')">${loadText}</button>`;
+                    }
+
+                    // Add Delete button to every MIB
+                    actionsHtml += `<button class="btn-mini" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;" onclick="deleteMib('${file}')">${deleteText}</button>`;
+
                     div.innerHTML = `
-                    <input type="checkbox" id="mib-${file}" value="${file}" class="mib-checkbox" onchange="updateDeleteButtonVisibility()">
-                    <label for="mib-${file}" style="cursor: pointer; overflow: hidden; text-overflow: ellipsis;">${file}</label>
-                `;
+                        <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5rem;">
+                            <span class="status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? (translations[currentLang].status_active || 'Active') : (translations[currentLang].status_file || 'File')}</span>
+                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem;" title="${file}">${file}</span>
+                        </div>
+                        <div class="mib-actions">${actionsHtml}</div>
+                    `;
                     mibListDiv.appendChild(div);
                 });
-                updateDeleteButtonVisibility();
             }
 
-            function updateDeleteButtonVisibility() {
-                const selected = getSelectedMibs();
-                deleteMibBtn.style.display = selected.length > 0 ? 'block' : 'none';
+            async function loadMib(filename) {
+                try {
+                    const res = await fetch('/api/mibs/load', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename })
+                    });
+
+                    const contentType = res.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        const data = await res.json();
+                        if (res.ok && data.success) {
+                            fetchMibs();
+                            refreshMibBrowser();
+                        } else {
+                            alert("Load failed: " + (data.error || "Unknown error"));
+                        }
+                    } else {
+                        const text = await res.text();
+                        console.error("Server returned non-JSON response:", text);
+                        alert(`Load failed: Server returned ${res.status} ${res.statusText}`);
+                    }
+                } catch (err) {
+                    console.error("Failed to load MIB", err);
+                    alert("Load failed: " + err.message);
+                }
             }
 
-            async function deleteSelectedMibs() {
-                const selected = getSelectedMibs();
-                if (selected.length === 0) return;
+            async function unloadMib(moduleName) {
+                try {
+                    const res = await fetch('/api/mibs/unload', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ moduleName })
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        fetchMibs();
+                        refreshMibBrowser();
+                    } else {
+                        alert("Unload failed: " + (data.error || "Module might still be required by others"));
+                    }
+                } catch (err) {
+                    console.error("Failed to unload MIB", err);
+                    alert("Unload error: " + err.message);
+                }
+            }
 
-                if (!confirm(translations[currentLang].confirm_delete.replace('{count}', selected.length))) return;
+            function refreshMibBrowser() {
+                mibTreeData = null; // Forces re-fetch on next open
+                if (mibModal.style.display === 'flex') {
+                    openMibBrowser();
+                }
+            }
+
+            async function deleteMib(filename) {
+                if (!confirm(translations[currentLang].confirm_delete_single || 'Are you sure you want to delete this MIB file?')) return;
 
                 try {
                     const res = await fetch('/api/mibs', {
                         method: 'DELETE',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ files: selected })
+                        body: JSON.stringify({ files: [filename] })
                     });
                     if (res.ok) {
-                        fetchMibs(); // Refresh list
+                        fetchMibs();
+                        refreshMibBrowser();
                     } else {
                         const err = await res.json();
-                        alert(translations[currentLang].delete_failed + err.error);
+                        alert((translations[currentLang].delete_failed || 'Delete failed: ') + err.error);
                     }
                 } catch (error) {
                     console.error('Delete error:', error);
-                    alert(translations[currentLang].delete_failed);
+                    alert(translations[currentLang].delete_failed || 'Delete failed');
                 }
             }
 
-            function getSelectedMibs() {
-                const checkboxes = document.querySelectorAll('.mib-checkbox:checked');
-                return Array.from(checkboxes).map(cb => cb.value);
-            }
 
             scanBtn.addEventListener('click', async () => {
                 const ip = targetIp.value.trim();
                 const oid = rootOid.value.trim();
                 const comm = community.value.trim();
-                const selectedMibs = getSelectedMibs();
                 const version = snmpVersion.value;
 
                 if (!ip) {
@@ -1752,6 +2181,7 @@
                 showError(null); // Clear errors
                 resultsDiv.innerHTML = '';
                 toolbarContainer.style.display = 'none';
+                snmpStatusBar.style.display = 'none';
                 lastScanData = null;
 
                 try {
@@ -1767,9 +2197,6 @@
                         url += `&community=${encodeURIComponent(comm)}`;
                     }
 
-                    if (selectedMibs.length > 0) {
-                        url += `&mibs=${encodeURIComponent(selectedMibs.join(','))}`;
-                    }
 
                     // Create new AbortController for this request
                     abortController = new AbortController();
@@ -1825,6 +2252,9 @@
             function renderTables(data) {
                 const { tables, raw } = data;
                 resultsDiv.innerHTML = '';
+
+                let displayedOids = 0;
+                const totalOids = raw ? raw.length : 0;
 
                 // Helper function to check if text matches search query
                 const matchesSearch = (text) => {
@@ -1899,6 +2329,7 @@
                     totalSections++;
                     if (scalarResults.length > 0) {
                         visibleSections++;
+                        displayedOids += scalarResults.length;
                         const card = document.createElement('div');
                         card.className = 'table-card';
                         card.style.marginBottom = '2rem';
@@ -1986,6 +2417,12 @@
                     if (displayColumns.length === 0) return;
 
                     visibleSections++;
+
+                    // Count only actual data points in the visible columns
+                    displayColumns.forEach(col => {
+                        const actualEntriesInColumn = table.rows.filter(r => r[col] !== null).length;
+                        displayedOids += actualEntriesInColumn;
+                    });
 
                     const card = document.createElement('div');
                     card.className = 'table-card';
@@ -2089,6 +2526,15 @@
                     }
                 } else {
                     searchInfo.textContent = '';
+                }
+
+                // Update OID Statistics
+                if (raw && raw.length > 0) {
+                    snmpStatusBar.style.display = 'flex';
+                    totalOidsCount.textContent = totalOids;
+                    displayedOidsCount.textContent = displayedOids;
+                } else {
+                    snmpStatusBar.style.display = 'none';
                 }
             }
 
@@ -2229,7 +2675,176 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             });
+
+            // --- MIB Browser Logic ---
+            const mibModal = document.getElementById('mibModal');
+            const mibTreeContainer = document.getElementById('mibTreeContainer');
+            const mibSearchInput = document.getElementById('mibSearchInput');
+            const selectOidBtn = document.getElementById('selectOidBtn');
+            let mibTreeData = null;
+            let selectedOidInTree = null;
+
+            async function openMibBrowser() {
+                mibModal.style.display = 'flex';
+                if (!mibTreeData) {
+                    try {
+                        const response = await fetch('/api/mib-tree');
+                        mibTreeData = await response.json();
+                        renderMibTree(mibTreeData, mibTreeContainer);
+                    } catch (err) {
+                        mibTreeContainer.innerHTML = `<div style="color: #ef4444; padding: 1rem;">Failed to load MIB tree: ${err.message}</div>`;
+                    }
+                }
+            }
+
+            function closeMibBrowser() {
+                mibModal.style.display = 'none';
+            }
+
+            function renderMibTree(node, container, isMatch = true) {
+                container.innerHTML = '';
+                const element = createTreeNodeElement(node);
+                container.appendChild(element);
+
+                // Expand the first few levels by default
+                const children = element.querySelector('.mib-tree-children');
+                if (children && (node.oid === '1' || node.oid === '1.3' || node.oid === '1.3.6')) {
+                    children.classList.add('expanded');
+                    element.querySelector('.toggle-icon').classList.add('expanded');
+                }
+            }
+
+            function createTreeNodeElement(node) {
+                const item = document.createElement('div');
+                item.className = 'mib-tree-item';
+
+                const hasChildren = node.children && node.children.length > 0;
+                const content = document.createElement('div');
+                content.className = 'mib-tree-content';
+                content.onclick = (e) => {
+                    e.stopPropagation();
+                    selectMibNode(node, content);
+                };
+
+                const toggle = document.createElement('span');
+                toggle.className = 'toggle-icon';
+                if (hasChildren) {
+                    toggle.innerHTML = '<svg width="12" height="12" fill="currentColor" viewBox="0 0 20 20"><path d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"/></svg>';
+                    toggle.onclick = (e) => {
+                        e.stopPropagation();
+                        const childrenDiv = item.querySelector('.mib-tree-children');
+                        childrenDiv.classList.toggle('expanded');
+                        toggle.classList.toggle('expanded');
+                    };
+                } else {
+                    toggle.style.visibility = 'hidden';
+                }
+
+                const icon = document.createElement('span');
+                icon.className = 'mib-icon';
+                if (hasChildren) {
+                    icon.innerHTML = '<svg width="18" height="18" fill="#3b82f6" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>';
+                } else {
+                    icon.innerHTML = '<svg width="18" height="18" fill="#10b981" viewBox="0 0 24 24"><path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,8 17,8 17,8Z"/></svg>';
+                }
+
+                const name = document.createElement('span');
+                name.className = 'mib-tree-name';
+                name.textContent = node.name || '(no name)';
+                name.title = `${node.name || ''} (${node.oid})\n\n${node.description || ''}`;
+
+                const oid = document.createElement('span');
+                oid.className = 'oid-badge';
+                oid.textContent = node.oid || '';
+
+                content.appendChild(toggle);
+                content.appendChild(icon);
+                content.appendChild(name);
+                content.appendChild(oid);
+                item.appendChild(content);
+
+                if (hasChildren) {
+                    const childrenDiv = document.createElement('div');
+                    childrenDiv.className = 'mib-tree-children';
+                    node.children.forEach(child => {
+                        childrenDiv.appendChild(createTreeNodeElement(child));
+                    });
+                    item.appendChild(childrenDiv);
+                }
+
+                return item;
+            }
+
+            function selectMibNode(node, element) {
+                // Unselect previous
+                const prev = document.querySelector('.mib-tree-content.selected');
+                if (prev) prev.classList.remove('selected');
+
+                element.classList.add('selected');
+                selectedOidInTree = node.oid;
+                selectOidBtn.disabled = false;
+            }
+
+            selectOidBtn.onclick = () => {
+                if (selectedOidInTree) {
+                    document.getElementById('rootOid').value = selectedOidInTree;
+                    closeMibBrowser();
+                }
+            };
+
+            // Tree Search
+            mibSearchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                if (!mibTreeData) return;
+
+                if (!query) {
+                    renderMibTree(mibTreeData, mibTreeContainer);
+                    return;
+                }
+
+                const filteredTree = filterTree(mibTreeData, query);
+                if (filteredTree) {
+                    renderMibTree(filteredTree, mibTreeContainer);
+                    // Expand all filtered results
+                    expandAll(mibTreeContainer);
+                } else {
+                    mibTreeContainer.innerHTML = '<div style="text-align: center; padding: 2rem; color: #64748b;">No matching MIB objects found.</div>';
+                }
+            });
+
+            function filterTree(node, query) {
+                const nameMatch = node.name.toLowerCase().includes(query);
+                const oidMatch = node.oid.includes(query);
+
+                let filteredChildren = [];
+                if (node.children) {
+                    filteredChildren = node.children
+                        .map(child => filterTree(child, query))
+                        .filter(child => child !== null);
+                }
+
+                if (nameMatch || oidMatch || filteredChildren.length > 0) {
+                    return {
+                        ...node,
+                        children: filteredChildren
+                    };
+                }
+                return null;
+            }
+
+            function expandAll(container) {
+                container.querySelectorAll('.mib-tree-children').forEach(el => el.classList.add('expanded'));
+                container.querySelectorAll('.toggle-icon').forEach(el => el.classList.add('expanded'));
+            }
+
+            // Close modal when clicking outside
+            window.onclick = (event) => {
+                if (event.target == mibModal) {
+                    closeMibBrowser();
+                }
+            };
         </script>
+    </div>
 </body>
 
 </html>

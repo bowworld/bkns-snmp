@@ -9,6 +9,7 @@ services:
     volumes:
       - ./mibs:/usr/src/app/mibs
       - ./public:/usr/src/app/public
+      - ./lib:/usr/src/app/lib
       - ./server.js:/usr/src/app/server.js
       - ./settings.json:/usr/src/app/settings.json
     restart: unless-stopped

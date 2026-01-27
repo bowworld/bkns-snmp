@@ -98,6 +98,38 @@ app.get('/api/mibs', (req, res) => {
     }
 });
 
+// API: Get MIB Tree
+app.get('/api/mib-tree', (req, res) => {
+    try {
+        const tree = mibManager.getMibTree();
+        res.json(tree);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API: Get loaded modules
+app.get('/api/mibs/active', (req, res) => {
+    try {
+        res.json(mibManager.getLoadedModules());
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API: Unload module
+app.post('/api/mibs/unload', (req, res) => {
+    const { moduleName } = req.body;
+    if (!moduleName) return res.status(400).json({ error: "moduleName required" });
+
+    try {
+        const success = mibManager.unloadModule(moduleName);
+        res.json({ success });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // API: Upload MIB
 app.post('/api/upload-mib', upload.array('mibFiles'), (req, res) => {
     if (!req.files || req.files.length === 0) {
@@ -105,6 +137,19 @@ app.post('/api/upload-mib', upload.array('mibFiles'), (req, res) => {
     }
     const filenames = req.files.map(f => f.filename);
     res.json({ message: `${filenames.length} files uploaded successfully`, filenames });
+});
+
+// API: Explicitly load MIB
+app.post('/api/mibs/load', (req, res) => {
+    const { filename } = req.body;
+    if (!filename) return res.status(400).json({ error: "filename required" });
+
+    try {
+        const result = mibManager.loadMibFile(filename);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // API: Delete MIBs
@@ -118,6 +163,12 @@ app.delete('/api/mibs', (req, res) => {
     files.forEach(filename => {
         const filePath = path.join(mibsDir, filename);
         try {
+            // Unload from memory first if it's active
+            const moduleName = mibManager.fileToModule[filename];
+            if (moduleName) {
+                mibManager.unloadModule(moduleName);
+            }
+
             if (fs.existsSync(filePath)) {
                 fs.unlinkSync(filePath);
                 results.deleted.push(filename);
@@ -169,7 +220,7 @@ app.use((err, req, res, next) => {
 
 app.get('/api/snmp-walk', (req, res) => {
     const target = req.query.target || '192.168.2.1';
-    let rootOid = req.query.oid || '1.3.6'; // Default to Internet branch (includes MIB-2 and Enterprises)
+    let rootOid = req.query.oid || '1.3.6.1'; // Default to Internet branch (includes MIB-2 and Enterprises)
     const selectedMibs = req.query.mibs ? req.query.mibs.split(',') : [];
 
     // Sanitize OID (remove leading/trailing dots and spaces)
@@ -379,5 +430,5 @@ function processToTables(results, mibManager, selectedMibs) {
 }
 
 app.listen(port, () => {
-    console.log(`SNMP Viewer listening at http://localhost:${port}`);
+    console.log(`SNMP Viewer v2.1 (Explicit Load Support) listening at http://localhost:${port}`);
 });
