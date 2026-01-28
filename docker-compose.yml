@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   snmp-viewer:
     build: .
@@ -12,6 +10,7 @@ services:
       - ./lib:/usr/src/app/lib
       - ./server.js:/usr/src/app/server.js
       - ./settings.json:/usr/src/app/settings.json
+      - ../tomls:/usr/src/app/telegraf.d
     restart: unless-stopped
     depends_on:
       - influxdb
@@ -32,15 +31,17 @@ services:
       - influxdb-data:/var/lib/influxdb2
     restart: unless-stopped
 
-  telegraf:
-    image: telegraf:latest
-    container_name: telegraf
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
     volumes:
-      - ../tomls/telegraf_snmp_server.toml:/etc/telegraf/telegraf.conf:ro
-      - ./mibs:/usr/share/snmp/mibs:ro
+      - grafana-storage:/var/lib/grafana
     depends_on:
       - influxdb
     restart: unless-stopped
 
 volumes:
   influxdb-data:
+  grafana-storage:

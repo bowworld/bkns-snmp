@@ -1,0 +1,12 @@
+FROM telegraf:latest
+
+USER root
+RUN sed -i 's/main/main non-free-firmware non-free/g' /etc/apt/sources.list.d/debian.sources || \
+    sed -i 's/main/main non-free-firmware non-free/g' /etc/apt/sources.list
+
+RUN apt-get update && \
+    apt-get install -y snmp-mibs-downloader && \
+    download-mibs && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+USER telegraf

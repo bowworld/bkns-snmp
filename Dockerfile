@@ -11,9 +11,9 @@ RUN sed -i 's/main/main non-free-firmware non-free/g' /etc/apt/sources.list.d/de
 
 RUN apt-get update && apt-get install -y curl snmp snmp-mibs-downloader && \
     ARCH=$(dpkg --print-architecture) && \
-    curl -O https://dl.influxdata.com/telegraf/releases/telegraf_1.29.2-1_${ARCH}.deb && \
-    dpkg -i telegraf_1.29.2-1_${ARCH}.deb || apt-get install -f -y && \
-    rm telegraf_1.29.2-1_${ARCH}.deb && \
+    curl -O https://dl.influxdata.com/telegraf/releases/telegraf_1.37.1-1_${ARCH}.deb && \
+    dpkg -i telegraf_1.37.1-1_${ARCH}.deb || apt-get install -f -y && \
+    rm telegraf_1.37.1-1_${ARCH}.deb && \
     download-mibs && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 

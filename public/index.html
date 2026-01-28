@@ -2254,6 +2254,7 @@
 
             function generateTelegrafToml(config, options = { includeAgent: true, includeOutput: true }) {
                 let lines = [];
+                let scalingSteps = {}; // factor -> [fieldNames]
 
                 if (options.includeAgent && config.agentConfig) {
                     lines.push(config.agentConfig);
@@ -2322,8 +2323,12 @@
                         lines.push('  [[inputs.snmp.field]]');
                         lines.push(`    name = "${f.key}"`);
                         lines.push(`    oid = "${f.value}"`);
+
+                        // Collect scaling
                         if (f.scale && f.scale !== '' && parseFloat(f.scale) !== 1) {
-                            lines.push(`    scale = ${f.scale}`);
+                            const factor = parseFloat(f.scale);
+                            if (!scalingSteps[factor]) scalingSteps[factor] = [];
+                            scalingSteps[factor].push(f.key);
                         }
                         lines.push('');
                     });
@@ -2336,10 +2341,8 @@
                         lines.push(`    name = "${m.tableName}"`);
                         lines.push(`    oid = "${m.tableOid}"`);
 
-                        // Find table info from lastScanData to get column names
                         const tableInfo = lastScanData && lastScanData.tables ? lastScanData.tables.find(t => t.tableOid === m.tableOid) : null;
 
-                        // Combine tag and field columns
                         const allCols = [];
                         m.tagColumns.forEach(cId => allCols.push({ id: cId, isTag: true }));
                         m.fieldColumns.forEach(cId => {
@@ -2356,10 +2359,23 @@
                             if (col.isTag) {
                                 lines.push(`      is_tag = true`);
                             } else if (m.fieldScales && m.fieldScales[col.id] && m.fieldScales[col.id] !== '' && parseFloat(m.fieldScales[col.id]) !== 1) {
-                                lines.push(`      scale = ${m.fieldScales[col.id]}`);
+                                const factor = parseFloat(m.fieldScales[col.id]);
+                                if (!scalingSteps[factor]) scalingSteps[factor] = [];
+                                scalingSteps[factor].push(colName);
                             }
                             lines.push('');
                         });
+                    });
+                }
+
+                // Add Scaling Processors if needed
+                if (Object.keys(scalingSteps).length > 0) {
+                    lines.push('');
+                    lines.push('[[processors.scale]]');
+                    Object.keys(scalingSteps).forEach(factor => {
+                        lines.push('  [[processors.scale.scaling]]');
+                        lines.push(`    factor = ${factor}`);
+                        lines.push(`    fields = [${scalingSteps[factor].map(name => `"${name}"`).join(', ')}]`);
                     });
                 }
 
