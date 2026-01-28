@@ -1965,7 +1965,7 @@
                 updateLineProtocolPreview();
             });
 
-            function createFieldRow(key = '', value = '') {
+            function createFieldRow(key = '', value = '', scale = '') {
                 const row = document.createElement('div');
                 row.className = 'field-row';
                 row.dataset.key = key;
@@ -1974,8 +1974,8 @@
                 row.style.alignItems = 'center';
                 row.innerHTML = `
                     <input type="text" class="field-key" placeholder="Field Name" value="${key}" style="flex: 1; color: #10b981; font-weight: 500;">
-                    <input type="text" class="field-val" placeholder="OID" value="${oid}" style="flex: 1.5; color: #10b981; font-weight: 500;">
-                    <input type="text" class="field-scale" placeholder="${translations[currentLang].lp_scale}" value="${scale || ''}" style="flex: 0.5; color: #10b981; font-weight: 500;">
+                    <input type="text" class="field-val" placeholder="OID" value="${value}" style="flex: 1.5; color: #10b981; font-weight: 500;">
+                    <input type="text" class="field-scale" placeholder="${translations[currentLang].lp_scale}" value="${scale}" style="flex: 0.5; color: #10b981; font-weight: 500;">
                     <button class="btn-mini" onclick="this.parentElement.remove(); updateLineProtocolPreview();" style="padding: 0.5rem; color: #ef4444; background: none; border: none; cursor: pointer;">&times;</button>
                 `;
 
@@ -2057,9 +2057,24 @@
                     </div>
                 `;
 
-                // Add event listeners to checkboxes
-                card.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                // Add event listeners to checkboxes and scale inputs
+                card.querySelectorAll('.tag-col-checkbox').forEach(cb => {
                     cb.addEventListener('change', updateLineProtocolPreview);
+                });
+
+                card.querySelectorAll('.field-col-checkbox').forEach(cb => {
+                    cb.addEventListener('change', (e) => {
+                        const colId = e.target.value;
+                        const scaleInput = card.querySelector(`.field-scale-col[data-col="${colId}"]`);
+                        if (scaleInput) {
+                            scaleInput.style.display = e.target.checked ? 'block' : 'none';
+                        }
+                        updateLineProtocolPreview();
+                    });
+                });
+
+                card.querySelectorAll('.field-scale-col').forEach(input => {
+                    input.addEventListener('input', updateLineProtocolPreview);
                 });
 
                 card.querySelector('.delete-mapping-btn').addEventListener('click', () => {
@@ -2135,7 +2150,7 @@
                     }
                     if (settings.fields && Array.isArray(settings.fields)) {
                         fieldsContainer.innerHTML = '';
-                        settings.fields.forEach(f => createFieldRow(f.key, f.value));
+                        settings.fields.forEach(f => createFieldRow(f.key, f.value, f.scale));
                     } else {
                         // Default fields mapping for demo
                         createFieldRow('temp_c', '1.3.6.1.4.1.999.1.1');
@@ -2148,7 +2163,7 @@
                         if (lastScanData && lastScanData.tables) {
                             settings.tableMappings.forEach(m => {
                                 const info = lastScanData.tables.find(t => t.tableOid === m.tableOid);
-                                if (info) createTableMappingRow(info, m.tagColumns, m.fieldColumns);
+                                if (info) createTableMappingRow(info, m.tagColumns, m.fieldColumns, m.fieldScales);
                             });
                         }
                     }
@@ -2708,7 +2723,7 @@
                     card.querySelectorAll('.field-col-checkbox:checked').forEach(cb => {
                         const colId = cb.value;
                         fieldColumns.push(colId);
-                        const scaleInput = card.querySelector(`.field-scale-[data-col="${colId}"]`);
+                        const scaleInput = card.querySelector(`.field-scale-col[data-col="${colId}"]`);
                         if (scaleInput && scaleInput.value.trim()) {
                             fieldScales[colId] = scaleInput.value.trim();
                         }
