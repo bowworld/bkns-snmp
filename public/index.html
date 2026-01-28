@@ -1373,6 +1373,7 @@
                     lp_measurement: "Measurement Name",
                     lp_preview: "Line Protocol Preview",
                     save_btn: "Save",
+                    lp_scale: "Scale",
                     lp_tags: "Tags",
                     lp_fields: "Fields (Scalars)",
                     lp_table_mappings: "Table Mappings",
@@ -1480,6 +1481,7 @@
                     lp_measurement: "Имя измерения (Measurement)",
                     lp_preview: "Предпросмотр Line Protocol",
                     save_btn: "Сохранить",
+                    lp_scale: "Множитель",
                     lp_tags: "Теги (Tags)",
                     lp_fields: "Поля (Скалярные)",
                     lp_table_mappings: "Маппинг таблиц",
@@ -1587,6 +1589,7 @@
                     lp_measurement: "Measurement атауы",
                     lp_preview: "Line Protocol алдын ала қарау",
                     save_btn: "Сақтау",
+                    lp_scale: "Множитель",
                     lp_tags: "Тегтер (Tags)",
                     lp_fields: "Өрістер (Скалярлы)",
                     lp_table_mappings: "Кестелерді сәйкестендіру",
@@ -1971,25 +1974,27 @@
                 row.style.alignItems = 'center';
                 row.innerHTML = `
                     <input type="text" class="field-key" placeholder="Field Name" value="${key}" style="flex: 1; color: #10b981; font-weight: 500;">
-                    <input type="text" class="field-val" placeholder="OID (e.g. 1.3.6.1...)" value="${value}" style="flex: 2; color: #10b981; font-weight: 500;">
-                    <button class="delete-field-btn" style="background: #ef4444; padding: 0.5rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 6px;">
-                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
+                    <input type="text" class="field-val" placeholder="OID" value="${oid}" style="flex: 1.5; color: #10b981; font-weight: 500;">
+                    <input type="text" class="field-scale" placeholder="${translations[currentLang].lp_scale}" value="${scale || ''}" style="flex: 0.5; color: #10b981; font-weight: 500;">
+                    <button class="btn-mini" onclick="this.parentElement.remove(); updateLineProtocolPreview();" style="padding: 0.5rem; color: #ef4444; background: none; border: none; cursor: pointer;">&times;</button>
                 `;
 
-                row.querySelector('.field-key').addEventListener('input', updateLineProtocolPreview);
-                row.querySelector('.field-val').addEventListener('input', updateLineProtocolPreview);
-                row.querySelector('.delete-field-btn').addEventListener('click', () => {
-                    row.remove();
-                    updateLineProtocolPreview();
+                row.querySelectorAll('input').forEach(input => {
+                    input.addEventListener('input', updateLineProtocolPreview);
+                    input.addEventListener('focus', () => {
+                        // Remove highlight from previous
+                        if (activeInputForPicking) {
+                            activeInputForPicking.classList.remove('active-input-highlight');
+                        }
+                        activeInputForPicking = input;
+                        activeInputForPicking.classList.add('active-input-highlight');
+                    });
                 });
 
                 fieldsContainer.appendChild(row);
             }
 
-            function createTableMappingRow(tableInfo, selectedTags = [], selectedFields = []) {
+            function createTableMappingRow(tableInfo, selectedTags = [], selectedFields = [], selectedFieldScales = {}) {
                 const tableOid = tableInfo.tableOid;
                 const tableName = tableInfo.tableName || tableOid;
 
@@ -2010,12 +2015,18 @@
                     const name = (tableInfo.columnNames && tableInfo.columnNames[colId]) ? tableInfo.columnNames[colId] : `Col ${colId}`;
                     const isTag = selectedTags.includes(String(colId));
                     const isField = selectedFields.includes(String(colId));
+                    const scaleValue = selectedFieldScales[colId] !== undefined ? selectedFieldScales[colId] : '';
 
                     columnsHtml += `
-                        <div class="column-item">
+                        <div class="column-item" style="display: flex; align-items: center; gap: 0.5rem;">
                             <div style="flex: 1; font-weight: 500;">${name}</div>
-                            <label style="font-size: 0.75rem; color: #ef4444;"><input type="checkbox" class="tag-col-checkbox" value="${colId}" ${isTag ? 'checked' : ''}> Tag</label>
-                            <label style="font-size: 0.75rem; color: #10b981;"><input type="checkbox" class="field-col-checkbox" value="${colId}" ${isField ? 'checked' : ''}> Field</label>
+                            <label style="font-size: 0.75rem; color: #ef4444; display: flex; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" class="tag-col-checkbox" value="${colId}" ${isTag ? 'checked' : ''}> Tag
+                            </label>
+                            <label style="font-size: 0.75rem; color: #10b981; display: flex; align-items: center; gap: 0.25rem;">
+                                <input type="checkbox" class="field-col-checkbox" value="${colId}" ${isField ? 'checked' : ''}> Field
+                            </label>
+                            <input type="text" class="field-scale-col" data-col="${colId}" placeholder="${translations[currentLang].lp_scale}" value="${scaleValue}" style="width: 60px; padding: 2px 4px; font-size: 0.75rem; border: 1px solid var(--border); border-radius: 4px; height: 20px; ${isField ? '' : 'display: none;'}">
                         </div>
                     `;
                 });
@@ -2296,6 +2307,9 @@
                         lines.push('  [[inputs.snmp.field]]');
                         lines.push(`    name = "${f.key}"`);
                         lines.push(`    oid = "${f.value}"`);
+                        if (f.scale && f.scale !== '' && parseFloat(f.scale) !== 1) {
+                            lines.push(`    scale = ${f.scale}`);
+                        }
                         lines.push('');
                     });
                 }
@@ -2326,6 +2340,8 @@
                             lines.push(`      oid = "${m.tableOid}.${col.id}"`);
                             if (col.isTag) {
                                 lines.push(`      is_tag = true`);
+                            } else if (m.fieldScales && m.fieldScales[col.id] && m.fieldScales[col.id] !== '' && parseFloat(m.fieldScales[col.id]) !== 1) {
+                                lines.push(`      scale = ${m.fieldScales[col.id]}`);
                             }
                             lines.push('');
                         });
@@ -2676,7 +2692,8 @@
                 document.querySelectorAll('.field-row').forEach(row => {
                     const key = row.querySelector('.field-key').value.trim();
                     const value = row.querySelector('.field-val').value.trim();
-                    if (key) fields.push({ key, value });
+                    const scale = row.querySelector('.field-scale').value.trim();
+                    if (key) fields.push({ key, value, scale });
                 });
 
                 const tableMappings = [];
@@ -2685,11 +2702,20 @@
                     const tableName = card.dataset.tableName;
                     const tagColumns = [];
                     card.querySelectorAll('.tag-col-checkbox:checked').forEach(cb => tagColumns.push(cb.value));
+
                     const fieldColumns = [];
-                    card.querySelectorAll('.field-col-checkbox:checked').forEach(cb => fieldColumns.push(cb.value));
+                    const fieldScales = {};
+                    card.querySelectorAll('.field-col-checkbox:checked').forEach(cb => {
+                        const colId = cb.value;
+                        fieldColumns.push(colId);
+                        const scaleInput = card.querySelector(`.field-scale-[data-col="${colId}"]`);
+                        if (scaleInput && scaleInput.value.trim()) {
+                            fieldScales[colId] = scaleInput.value.trim();
+                        }
+                    });
 
                     if (tagColumns.length > 0 || fieldColumns.length > 0) {
-                        tableMappings.push({ tableOid, tableName, tagColumns, fieldColumns });
+                        tableMappings.push({ tableOid, tableName, tagColumns, fieldColumns, fieldScales });
                     }
                 });
 
