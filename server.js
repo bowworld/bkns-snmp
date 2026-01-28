@@ -378,6 +378,13 @@ app.get('/api/equipment', (req, res) => {
                         block.match(/device_sn\s*=\s*["']([^"']+)["']/) ||
                         block.match(/tag_2\s*=\s*["']([^"']+)["']/);
 
+                    // Also match agents (IP addresses)
+                    const agentsMatch = block.match(/agents\s*=\s*\[([^\]]+)\]/);
+                    let agents = [];
+                    if (agentsMatch) {
+                        agents = agentsMatch[1].split(',').map(a => a.trim().replace(/["']/g, ''));
+                    }
+
                     if (measurementMatch || snMatch) {
                         const m = measurementMatch ? measurementMatch[1] : 'snmp';
                         const t1 = modelMatch ? modelMatch[1] : 'Unknown Model';
@@ -389,6 +396,7 @@ app.get('/api/equipment', (req, res) => {
                                 measurement: m,
                                 tag_1: t1,
                                 tag_2: t2,
+                                agents: agents,
                                 source: 'telegraf.d'
                             });
                         }
@@ -415,10 +423,14 @@ app.get('/api/equipment', (req, res) => {
             // the version in files is usually more authoritative/permanent.
             const exists = equipment.some(e => e.tag_2 === t2);
             if (!exists) {
+                // Get target IP from settings if possible (it's not saved in settings.json usually, 
+                // but let's try to find it or use a default)
+                // Actually, the app uses 'targetIp' textarea in UI.
                 equipment.push({
                     measurement: m,
                     tag_1: t1,
                     tag_2: t2,
+                    agents: [], // Settings usually doesn't have agents saved yet
                     source: 'settings'
                 });
             }
@@ -650,6 +662,41 @@ function processToTables(results, mibManager, selectedMibs) {
 
     return finalTables;
 }
+
+// API: Check status of multiple IPs
+app.post('/api/equipment/status', (req, res) => {
+    const { agents } = req.body; // Array of IPs
+    if (!agents || !Array.isArray(agents)) {
+        return res.status(400).json({ error: "agents must be an array of IPs" });
+    }
+
+    if (agents.length === 0) return res.json({});
+
+    const statusResults = {};
+    let pending = agents.length;
+
+    agents.forEach(ip => {
+        // Use a very fast SNMP get for sysUpTime.0 to check life
+        const session = snmp.createSession(ip, "public", {
+            timeout: 2000,
+            retries: 0,
+            version: snmp.Version2c
+        });
+
+        session.get(["1.3.6.1.2.1.1.3.0"], (error, varbinds) => {
+            if (error) {
+                statusResults[ip] = 'offline';
+            } else {
+                statusResults[ip] = 'online';
+            }
+            session.close();
+            pending--;
+            if (pending === 0) {
+                res.json(statusResults);
+            }
+        });
+    });
+});
 
 app.listen(port, () => {
     console.log(`SNMP Viewer v2.1 (Explicit Load Support) listening at http://localhost:${port}`);

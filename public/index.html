@@ -926,6 +926,28 @@
             font-family: monospace;
         }
 
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 0.5rem;
+            background-color: #cbd5e1;
+            /* Gray by default */
+        }
+
+        .status-indicator.online {
+            background-color: #10b981;
+            /* Green */
+            box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+        }
+
+        .status-indicator.offline {
+            background-color: #ef4444;
+            /* Red */
+            box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+        }
+
         /* Root OID Combobox-like input */
         .oid-input-wrapper {
             position: relative;
@@ -971,6 +993,18 @@
                 <button class="tab-btn" onclick="switchTab('general-tab')" data-i18n="tab_general">General
                     Settings</button>
                 <button class="tab-btn" onclick="switchTab('about-tab')" data-i18n="tab_about">About</button>
+                <div style="flex-grow: 1;"></div>
+                <button class="tab-btn" onclick="window.open('http://' + window.location.hostname + ':3001', '_blank')"
+                    style="color: #f59e0b; font-weight: 600;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <path
+                            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                        <path
+                            d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
+                    </svg>
+                    Grafana ↗
+                </button>
             </nav>
         </div>
 
@@ -1573,7 +1607,9 @@
                     no_configs: "No configurations found",
                     view_config: "View",
                     confirm_delete_config: "Are you sure you want to delete this configuration?",
-                    config_content_title: "Config Content"
+                    config_content_title: "Config Content",
+                    status_online: "Online",
+                    status_offline: "Offline"
                 },
                 ru: {
                     title: "SNMP Просмотрщик",
@@ -1691,7 +1727,9 @@
                     no_configs: "Конфигурации не найдены",
                     view_config: "Просмотр",
                     confirm_delete_config: "Вы уверены, что хотите удалить эту конфигурацию?",
-                    config_content_title: "Содержимое конфигурации"
+                    config_content_title: "Содержимое конфигурации",
+                    status_online: "В сети",
+                    status_offline: "Не в сети"
                 },
                 kk: {
                     title: "SNMP Көруші",
@@ -1809,7 +1847,9 @@
                     no_configs: "Конфигурациялар табылмады",
                     view_config: "Көру",
                     confirm_delete_config: "Бұл конфигурацияны жоюыңызға сенімдісіз бе?",
-                    config_content_title: "Конфигурация мазмұны"
+                    config_content_title: "Конфигурация мазмұны",
+                    status_online: "Желіде",
+                    status_offline: "Желіде емес"
                 }
             };
 
@@ -1948,11 +1988,52 @@
 
                         // Expand all by default for now
                         document.querySelectorAll('.tree-node').forEach(n => n.classList.add('expanded'));
+
+                        // Start status checking if we have agents
+                        checkEquipmentStatuses(data);
                     })
                     .catch(err => {
                         console.error('Failed to load dashboard:', err);
                         treeContainer.innerHTML = `<div class="error-message" style="display: block;">Error loading dashboard: ${err.message}</div>`;
                     });
+            }
+
+            function checkEquipmentStatuses(data) {
+                const agentsToCheck = [];
+                const ipToNodes = {};
+
+                data.forEach(item => {
+                    if (item.agents && item.agents.length > 0) {
+                        item.agents.forEach(ip => {
+                            if (!agentsToCheck.includes(ip)) agentsToCheck.push(ip);
+                            if (!ipToNodes[ip]) ipToNodes[ip] = [];
+                            ipToNodes[ip].push(item.tag_2); // Map IP to Serial Number (tag_2)
+                        });
+                    }
+                });
+
+                if (agentsToCheck.length === 0) return;
+
+                fetch('/api/equipment/status', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agents: agentsToCheck })
+                })
+                    .then(res => res.json())
+                    .then(statuses => {
+                        Object.keys(statuses).forEach(ip => {
+                            const status = statuses[ip];
+                            const serials = ipToNodes[ip];
+                            serials.forEach(sn => {
+                                const indicators = document.querySelectorAll(`.status-indicator[data-sn="${sn}"]`);
+                                indicators.forEach(ind => {
+                                    ind.className = `status-indicator ${status}`;
+                                    ind.title = status === 'online' ? translations[currentLang].status_online : translations[currentLang].status_offline;
+                                });
+                            });
+                        });
+                    })
+                    .catch(e => console.error("Status check failed", e));
             }
 
             function createTreeNode(label, type, icon, isLeaf = false) {
@@ -1970,7 +2051,10 @@
                     <div class="tree-node-content">
                         ${!isLeaf ? `<div class="node-toggle">${icons.chevron}</div>` : '<div style="width: 16px;"></div>'}
                         <div class="node-icon">${icons[icon]}</div>
-                        <div class="node-label">${label}</div>
+                        <div class="node-label">
+                            ${isLeaf ? `<span class="status-indicator" data-sn="${label}"></span>` : ''}
+                            ${label}
+                        </div>
                         <div class="node-badge">${type}</div>
                     </div>
                     ${!isLeaf ? '<div class="tree-node-children"></div>' : ''}
@@ -2016,6 +2100,16 @@
                     if (typeof loadDashboardData === 'function') loadDashboardData();
                 }
             }
+
+            // Periodic refresh for dashboard statuses
+            setInterval(() => {
+                if (document.getElementById('dashboard-tab').classList.contains('active')) {
+                    // We don't need to reload the whole tree, just refresh statuses
+                    // To do this properly, we need the last equipment data.
+                    // For simplicity, let's just call loadDashboardData() or a specialized refresh.
+                    if (typeof loadDashboardData === 'function') loadDashboardData();
+                }
+            }, 30000);
 
             // Initialize language and tab
             applyTranslations(currentLang);
@@ -2814,13 +2908,18 @@
                     const deleteText = translations[currentLang].btn_delete || 'Delete';
 
                     if (isActive && moduleMap[file]) {
-                        actionsHtml = `<button class="btn-mini" onclick="unloadMib('${moduleMap[file]}')">${unloadText}</button>`;
+                        // Pass the MODULE NAME for unloading if we have it
+                        const modName = moduleMap[file];
+                        actionsHtml = `<button class="btn-mini" style="cursor: pointer;" onclick="window.unloadMib('${modName.replace(/'/g, "\\'")}')">${unloadText}</button>`;
+                    } else if (isActive) {
+                        // Fallback: Pass filename if we don't have a module name mapping (e.g. failed load but tracked)
+                        actionsHtml = `<button class="btn-mini" style="cursor: pointer;" onclick="window.unloadMib('${file.replace(/'/g, "\\'")}')">${unloadText}</button>`;
                     } else {
-                        actionsHtml = `<button class="btn-mini btn-success" style="color: white; border: none;" onclick="loadMib('${file}')">${loadText}</button>`;
+                        actionsHtml = `<button class="btn-mini btn-success" style="color: white; border: none; cursor: pointer;" onclick="console.log('Clicking load for ${file}'); window.loadMib('${file.replace(/'/g, "\\'")}')">${loadText}</button>`;
                     }
 
                     // Add Delete button to every MIB
-                    actionsHtml += `<button class="btn-mini" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;" onclick="deleteMib('${file}')">${deleteText}</button>`;
+                    actionsHtml += `<button class="btn-mini" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5; cursor: pointer;" onclick="window.deleteMib('${file.replace(/'/g, "\\'")}')">${deleteText}</button>`;
 
                     div.innerHTML = `
                         <div style="flex: 1; min-width: 0; display: flex; align-items: center; gap: 0.5rem;">
@@ -2833,7 +2932,12 @@
                 });
             }
 
+            window.loadMib = loadMib;
+            window.unloadMib = unloadMib;
+            window.deleteMib = deleteMib;
+
             async function loadMib(filename) {
+                console.log("Called loadMib for", filename);
                 try {
                     const res = await fetch('/api/mibs/load', {
                         method: 'POST',

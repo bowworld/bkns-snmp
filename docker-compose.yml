@@ -31,5 +31,20 @@ services:
       - influxdb-data:/var/lib/influxdb2
     restart: unless-stopped
 
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+    depends_on:
+      - influxdb
+
 volumes:
   influxdb-data:
+  grafana-data:

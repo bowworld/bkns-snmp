@@ -38,7 +38,8 @@ The tool enables administrators to map hardware parameters (via **SNMP** or **Mo
 1. Ensure you have Docker and Docker Compose installed.
 2. Clone the repository.
 3. Run `docker compose up -d --build`.
-4. Open the application at `http://localhost:3000`.
+4. Open the SNMP Viewer at `http://localhost:3000`.
+5. Open Grafana at `http://localhost:3001` (login: `admin` / `password: admin`).
 
 ---
 
@@ -76,4 +77,5 @@ SNMP Viewer — бұл SNMP протоколы арқылы желілік жа�
 1. Компьютеріңізде Docker және Docker Compose орнатылғанына көз жеткізіңіз.
 2. Репозиторийді клондаңыз.
 3. `docker compose up -d --build` командасын орындаңыз.
-4. Қосымшаны `http://localhost:3000` мекенжайынан ашыңыз.
+4. SNMP Viewer қосымшасын `http://localhost:3000` мекенжайынан ашыңыз.
+5. Grafana-ны `http://localhost:3001` мекенжайынан ашыңыз (логин: `admin` / `құпия сөз: admin`).
