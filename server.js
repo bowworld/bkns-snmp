@@ -15,6 +15,12 @@ if (!fs.existsSync(mibsDir)) {
     fs.mkdirSync(mibsDir, { recursive: true });
 }
 
+// Set up Telegraf config directory
+const telegrafDir = path.join(__dirname, 'telegraf.d');
+if (!fs.existsSync(telegrafDir)) {
+    fs.mkdirSync(telegrafDir, { recursive: true });
+}
+
 // Settings storage
 const settingsFile = path.join(__dirname, 'settings.json');
 if (!fs.existsSync(settingsFile)) {
@@ -243,7 +249,16 @@ app.post('/api/telegraf/start', (req, res) => {
 
     try {
         telegrafLogs = [];
-        telegrafProcess = spawn('telegraf', ['--config', filePath]);
+
+        // Use both main config and telegraf.d directory
+        const args = ['--config', filePath];
+
+        // If the filePath is the main config, also include the telegraf.d directory relative to it
+        // Or just always include our local telegraf.d for this app
+        args.push('--config-directory', telegrafDir);
+
+        console.log(`Starting Telegraf with args: ${args.join(' ')}`);
+        telegrafProcess = spawn('telegraf', args);
 
         telegrafProcess.on('error', (err) => {
             console.error('Failed to start Telegraf:', err);

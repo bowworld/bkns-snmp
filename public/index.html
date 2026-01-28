@@ -336,6 +336,58 @@
             opacity: 0.7;
         }
 
+        /* Tooltip Styles */
+        [data-tooltip] {
+            position: relative;
+        }
+
+        [data-tooltip]::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #1e293b;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 400;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 2000;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            pointer-events: none;
+        }
+
+        [data-tooltip]::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #1e293b;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.2s ease;
+            z-index: 2000;
+            pointer-events: none;
+        }
+
+        [data-tooltip]:hover::after,
+        [data-tooltip]:hover::before {
+            opacity: 1;
+            visibility: visible;
+            bottom: calc(110% + 5px);
+        }
+
+        [data-tooltip]:hover::before {
+            bottom: 110%;
+        }
+
         .table-mapping-card {
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -873,7 +925,8 @@
                             <div class="oid-input-wrapper">
                                 <input type="text" id="rootOid" placeholder="Root OID (Optional)" value="1.3.6.1"
                                     style="width: 100%; padding-right: 90px; box-sizing: border-box;">
-                                <button class="oid-browse-btn" onclick="openMibBrowser()">Browse...</button>
+                                <button class="oid-browse-btn" onclick="openMibBrowser()"
+                                    data-i18n-tip="browse_mib_tip">Browse...</button>
                             </div>
 
                             <div style="display: flex; gap: 0.5rem; width: 100%; align-items: center;">
@@ -919,7 +972,7 @@
                                 </div>
                             </div>
 
-                            <button id="scanBtn" style="width: 100%;">Scan Device</button>
+                            <button id="scanBtn" style="width: 100%;" data-i18n-tip="scan_btn_tip">Scan Device</button>
                         </div>
 
                         <div class="mib-panel">
@@ -929,6 +982,7 @@
                                     <input type="file" id="mibUploadInput" style="display: none;" accept=".txt,.mib,.my"
                                         multiple>
                                     <button id="uploadMibBtn" class="btn-secondary" data-i18n="upload_btn"
+                                        data-i18n-tip="upload_mib_tip"
                                         onclick="document.getElementById('mibUploadInput').click()">+ Upload</button>
                                 </div>
                             </div>
@@ -945,7 +999,7 @@
                     <div id="loading" class="loading">
                         <div class="spinner"></div>
                         <p data-i18n="scanning_text">Scanning device... This may take a few seconds.</p>
-                        <button id="stopBtn" data-i18n="stop_btn"
+                        <button id="stopBtn" data-i18n="stop_btn" data-i18n-tip="stop_btn_tip"
                             style="background-color: #ef4444; margin-top: 1rem;">Stop
                             &
                             Reset
@@ -967,7 +1021,7 @@
                                     </span>
                                     <input type="text" id="searchInput" placeholder="Search sections and columns..."
                                         style="width: 100%; padding-left: 40px; box-sizing: border-box;">
-                                    <button id="clearSearchBtn"
+                                    <button id="clearSearchBtn" data-i18n-tip="clear_search_tip"
                                         style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; padding: 4px; cursor: pointer; color: #64748b;">
                                         <svg width="16" height="16" fill="none" viewBox="0 0 24 24"
                                             stroke="currentColor">
@@ -982,9 +1036,11 @@
                             <div style="display: flex; gap: 1rem; align-items: center;">
                                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                                     <button id="downloadTxtBtn" data-i18n="download_txt"
+                                        data-i18n-tip="download_txt_tip"
                                         style="background-color: #64748b; padding: 0.5rem 1rem; font-size: 0.875rem;">Download
                                         TXT</button>
                                     <button id="downloadCsvBtn" data-i18n="download_csv"
+                                        data-i18n-tip="download_csv_tip"
                                         style="padding: 0.5rem 1rem; font-size: 0.875rem;">Download
                                         CSV</button>
                                 </div>
@@ -1026,11 +1082,15 @@
                             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                                 <label style="font-weight: 500;" data-i18n="config_path">Configuration File
                                     Path:</label>
-                                <div style="display: flex; gap: 0.5rem;">
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                                     <input type="text" id="telegraf-config-path"
-                                        placeholder="/etc/telegraf/telegraf.conf" style="flex: 1;">
-                                    <button id="save-telegraf-config-btn" class="btn-secondary"
-                                        data-i18n="save_to_path">Save to Path</button>
+                                        placeholder="/etc/telegraf/telegraf.conf" style="flex: 1; min-width: 200px;">
+                                    <button id="save-telegraf-config-btn" class="btn-secondary" data-i18n="save_to_path"
+                                        data-i18n-tip="save_path_tip">Save to Path</button>
+                                    <button id="save-device-config-btn" class="btn-secondary"
+                                        style="background: #3b82f6; color: white; border: none;"
+                                        data-i18n="save_device_btn" data-i18n-tip="save_device_tip">Save as Device
+                                        Config</button>
                                 </div>
                                 <p style="font-size: 0.8rem; color: var(--text-muted);" data-i18n="path_hint">Linux:
                                     /etc/telegraf/telegraf.d/snmp.conf | Windows: C:\Program
@@ -1045,19 +1105,23 @@
                                         style="margin-left: 0.5rem;">Stopped</span>
                                 </div>
                                 <div style="display: flex; gap: 0.5rem;">
-                                    <button id="start-telegraf-btn" class="btn-success" data-i18n="start_telegraf">Start
+                                    <button id="start-telegraf-btn" class="btn-success" data-i18n="start_telegraf"
+                                        data-i18n-tip="start_telegraf_tip">Start
                                         Telegraf</button>
                                     <button id="stop-telegraf-btn" style="background: #ef4444;"
-                                        data-i18n="stop_telegraf">Stop Telegraf</button>
+                                        data-i18n="stop_telegraf" data-i18n-tip="stop_telegraf_tip">Stop
+                                        Telegraf</button>
                                     <button id="refresh-telegraf-status-btn" class="btn-secondary"
-                                        data-i18n="refresh_status">Refresh Status</button>
+                                        data-i18n="refresh_status" data-i18n-tip="refresh_status_tip">Refresh
+                                        Status</button>
                                 </div>
                             </div>
 
                             <div style="display: flex; flex-direction: column; gap: 0.5rem;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <label style="font-weight: 500;" data-i18n="telegraf_logs">Logs (Output):</label>
-                                    <button class="btn-mini" id="clear-telegraf-logs-btn" data-i18n="clear_logs">Clear
+                                    <button class="btn-mini" id="clear-telegraf-logs-btn" data-i18n="clear_logs"
+                                        data-i18n-tip="clear_logs_tip">Clear
                                         Logs</button>
                                 </div>
                                 <div id="telegraf-logs-area"
@@ -1085,8 +1149,10 @@
                         <div style="display: flex; gap: 0.5rem; max-width: 500px;">
                             <input type="text" id="lpMeasurement" placeholder="e.g., snmp" value="snmp"
                                 style="flex: 1; color: #3b82f6; font-weight: 500;">
-                            <button id="saveLpSettingsBtn" data-i18n="save_btn">Save</button>
-                            <button id="downloadLpTomlBtn" data-i18n="download_toml" class="btn-secondary">Download
+                            <button id="saveLpSettingsBtn" data-i18n="save_btn"
+                                data-i18n-tip="save_lp_tip">Save</button>
+                            <button id="downloadLpTomlBtn" data-i18n="download_toml" class="btn-secondary"
+                                data-i18n-tip="download_toml_tip">Download
                                 TOML</button>
                         </div>
                     </div>
@@ -1097,7 +1163,7 @@
                             style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
                             <!-- Tags will be rendered here -->
                         </div>
-                        <button id="addTagBtn" class="btn-secondary">+ Add Tag</button>
+                        <button id="addTagBtn" class="btn-secondary" data-i18n-tip="add_tag_tip">+ Add Tag</button>
                     </div>
                     <div class="settings-group">
                         <h3 data-i18n="lp_fields">Fields (Scalars)</h3>
@@ -1105,7 +1171,8 @@
                             style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem;">
                             <!-- Fields will be rendered here -->
                         </div>
-                        <button id="addFieldBtn" class="btn-secondary">+ Add Scalar Field</button>
+                        <button id="addFieldBtn" class="btn-secondary" data-i18n-tip="add_field_tip">+ Add Scalar
+                            Field</button>
                     </div>
 
                     <div class="settings-group">
@@ -1250,6 +1317,7 @@
             const refreshTelegrafStatusBtn = document.getElementById('refresh-telegraf-status-btn');
             const telegrafLogsArea = document.getElementById('telegraf-logs-area');
             const clearTelegrafLogsBtn = document.getElementById('clear-telegraf-logs-btn');
+            const saveDeviceConfigBtn = document.getElementById('save-device-config-btn');
 
             let lastScanData = null;
             let searchQuery = '';
@@ -1333,6 +1401,26 @@
                     lp_output_config: "[[outputs.influxdb_v2]] Configuration",
                     total_oids: "Total OIDs polled",
                     displayed_oids: "Displayed OIDs",
+                    save_device_btn: "Save as Device Config (telegraf.d)",
+                    no_sn_error: "Please add 'device_sn' tag to identify the device file.",
+                    scan_btn_tip: "Start SNMP scan of the target device",
+                    stop_btn_tip: "Immediately stop all processes and reset the UI",
+                    upload_mib_tip: "Upload MIB files for OID translation",
+                    browse_mib_tip: "Browse the OID tree of loaded MIBs",
+                    download_txt_tip: "Export raw results as a text report",
+                    download_csv_tip: "Export results as a structured CSV file",
+                    save_lp_tip: "Save current measurement, tags, and fields settings",
+                    download_toml_tip: "Download the generated Telegraf configuration",
+                    save_path_tip: "Save the full configuration to the specified system path",
+                    save_device_tip: "Save device-specific configuration to telegraf.d directory",
+                    start_telegraf_tip: "Start the Telegraf service with current configuration",
+                    stop_telegraf_tip: "Stop the running Telegraf service",
+                    refresh_status_tip: "Check the current status and logs of Telegraf",
+                    clear_logs_tip: "Clear the log output window",
+                    add_tag_tip: "Add a new static tag to the Line Protocol",
+                    add_field_tip: "Add a new scalar field mapping",
+                    clear_search_tip: "Clear the current search filter",
+                    map_table_tip: "Configure entire SNMP table mapping",
                     mib_browser_title: "MIB Browser",
                     cancel_btn: "Cancel",
                     select_btn: "Select",
@@ -1420,6 +1508,26 @@
                     lp_output_config: "Конфигурация [[outputs.influxdb_v2]]",
                     total_oids: "Всего OID опрошено",
                     displayed_oids: "Отображаемых OID",
+                    save_device_btn: "Сохранить как конфиг устройства (telegraf.d)",
+                    no_sn_error: "Пожалуйста, добавьте тег 'device_sn' для идентификации файла устройства.",
+                    scan_btn_tip: "Начать SNMP сканирование целевого устройства",
+                    stop_btn_tip: "Немедленно остановить все процессы и сбросить интерфейс",
+                    upload_mib_tip: "Загрузить MIB файлы для перевода OID",
+                    browse_mib_tip: "Просмотр дерева OID загруженных MIB файлов",
+                    download_txt_tip: "Экспортировать результаты в текстовый отчет",
+                    download_csv_tip: "Экспортировать результаты в таблицу CSV",
+                    save_lp_tip: "Сохранить настройки измерения, тегов и полей",
+                    download_toml_tip: "Скачать сгенерированный конфиг Telegraf",
+                    save_path_tip: "Сохранить полный конфиг по указанному системному пути",
+                    save_device_tip: "Сохранить конфиг устройства в папку telegraf.d",
+                    start_telegraf_tip: "Запустить службу Telegraf с текущим конфигом",
+                    stop_telegraf_tip: "Остановить работающую службу Telegraf",
+                    refresh_status_tip: "Обновить статус и логи Telegraf",
+                    clear_logs_tip: "Очистить окно вывода логов",
+                    add_tag_tip: "Добавить новый статический тег в Line Protocol",
+                    add_field_tip: "Добавить новый маппинг скалярного поля",
+                    clear_search_tip: "Очистить фильтр поиска",
+                    map_table_tip: "Настроить маппинг всей SNMP таблицы",
                     mib_browser_title: "MIB браузер",
                     cancel_btn: "Отмена",
                     select_btn: "Выбрать",
@@ -1507,6 +1615,26 @@
                     lp_output_config: "[[outputs.influxdb_v2]] конфигурациясы",
                     total_oids: "Барлығы OID сұралды",
                     displayed_oids: "Көрсетілген OID",
+                    save_device_btn: "Құрылғы конфигі ретінді сақтау (telegraf.d)",
+                    no_sn_error: "Құрылғы файлын анықтау үшін 'device_sn' тегін қосыңыз.",
+                    scan_btn_tip: "Нысаналы құрылғыны SNMP сканерлеуді бастау",
+                    stop_btn_tip: "Барлық процестерді дереу тоқтату және интерфейсті қайтару",
+                    upload_mib_tip: "OID аудару үшін MIB файлдарын жүктеу",
+                    browse_mib_tip: "Жүктелген MIB файлдарының OID ағашын көру",
+                    download_txt_tip: "Нәтижелерді мәтіндік есеп ретінде экспорттау",
+                    download_csv_tip: "Нәтижелерді CSV кестесі ретінде экспорттау",
+                    save_lp_tip: "Өлшем, тег және өріс параметрлерін сақтау",
+                    download_toml_tip: "Жасалған Telegraf конфигурациясын жүктеу",
+                    save_path_tip: "Толық конфигурацияны көрсетілген жүйелік жолға сақтау",
+                    save_device_tip: "Құрылғы конфигурациясын telegraf.d қалтасына сақтау",
+                    start_telegraf_tip: "Telegraf қызметін ағымдағы конфигурациямен іске қосу",
+                    stop_telegraf_tip: "Жұмыс істеп тұрған Telegraf қызметін тоқтату",
+                    refresh_status_tip: "Telegraf күйін және логтарын тексеру",
+                    clear_logs_tip: "Логтарды шығару терезесін тазалау",
+                    add_tag_tip: "Line Protocol-ға жаңа статикалық тег қосу",
+                    add_field_tip: "Жаңа скалярлы өрісті сәйкестендіруді қосу",
+                    clear_search_tip: "Іздеу сүзгісін тазалау",
+                    map_table_tip: "Барлық SNMP кестесін сәйкестендіруді конфигурациялау",
                     mib_browser_title: "MIB браузері",
                     cancel_btn: "Бас тарту",
                     select_btn: "Таңдау",
@@ -1534,6 +1662,14 @@
                     const key = el.getAttribute('data-i18n');
                     if (t[key]) {
                         el.textContent = t[key];
+                    }
+                });
+
+                // Update elements with data-i18n-tip attribute
+                document.querySelectorAll('[data-i18n-tip]').forEach(el => {
+                    const key = el.getAttribute('data-i18n-tip');
+                    if (t[key]) {
+                        el.setAttribute('data-tooltip', t[key]);
                     }
                 });
 
@@ -2090,15 +2226,15 @@
                 }
             });
 
-            function generateTelegrafToml(config) {
+            function generateTelegrafToml(config, options = { includeAgent: true, includeOutput: true }) {
                 let lines = [];
 
-                if (config.agentConfig) {
+                if (options.includeAgent && config.agentConfig) {
                     lines.push(config.agentConfig);
                     lines.push('');
                 }
 
-                if (config.outputConfig) {
+                if (options.includeOutput && config.outputConfig) {
                     lines.push(config.outputConfig);
                     lines.push('');
                 }
@@ -2488,6 +2624,39 @@
                     } else {
                         const text = await res.text();
                         alert("Error (Server): " + (text.length > 100 ? text.substring(0, 100) + "..." : text));
+                    }
+                } catch (err) {
+                    alert("Error: " + err.message);
+                }
+            });
+
+            saveDeviceConfigBtn.addEventListener('click', async () => {
+                const configData = getTelegrafConfigData();
+                const snTag = configData.tags.find(t => t.key === 'device_sn');
+
+                if (!snTag || !snTag.value) {
+                    return alert(translations[currentLang].no_sn_error || "Please add 'device_sn' tag to identify the device file.");
+                }
+
+                const fileName = `device_${snTag.value.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.conf`;
+                // Explicitly use the telegraf.d directory
+                const configPath = `./telegraf.d/${fileName}`;
+
+                // For device configs, we DONT include agent and output (they should be in main telegraf.conf)
+                const configContent = generateTelegrafToml(configData, { includeAgent: false, includeOutput: false });
+
+                try {
+                    const res = await fetch('/api/telegraf/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: configPath, content: configContent })
+                    });
+
+                    if (res.ok) {
+                        alert(translations[currentLang].telegraf_save_success);
+                    } else {
+                        const data = await res.json();
+                        alert("Error: " + (data.error || "Unknown error"));
                     }
                 } catch (err) {
                     alert("Error: " + err.message);
