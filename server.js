@@ -312,6 +312,122 @@ app.get('/api/telegraf/status', (req, res) => {
     });
 });
 
+// API: List Telegraf configs in telegraf.d
+app.get('/api/telegraf/configs', (req, res) => {
+    if (!fs.existsSync(telegrafDir)) {
+        return res.json([]);
+    }
+    try {
+        const files = fs.readdirSync(telegrafDir).filter(f => f.endsWith('.conf') || f.endsWith('.toml'));
+        res.json(files);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API: Get Telegraf config content
+app.get('/api/telegraf/configs/:filename', (req, res) => {
+    const filePath = path.join(telegrafDir, req.params.filename);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "File not found" });
+    }
+    try {
+        const content = fs.readFileSync(filePath, 'utf8');
+        res.json({ content });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API: Delete Telegraf config
+app.delete('/api/telegraf/configs/:filename', (req, res) => {
+    const filePath = path.join(telegrafDir, req.params.filename);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ error: "File not found" });
+    }
+    try {
+        fs.unlinkSync(filePath);
+        res.json({ message: "Config deleted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// API: Equipment from Telegraf configs and settings
+app.get('/api/equipment', (req, res) => {
+    const equipment = [];
+
+    // 1. Get from telegraf.d directory
+    if (fs.existsSync(telegrafDir)) {
+        const files = fs.readdirSync(telegrafDir).filter(f => f.endsWith('.conf') || f.endsWith('.toml'));
+        files.forEach(file => {
+            try {
+                const content = fs.readFileSync(path.join(telegrafDir, file), 'utf8');
+
+                // Heuristic parsing of TOML content, split by plugin instance
+                const blocks = content.split('[[inputs.snmp]]').slice(1);
+                const blocksToParse = blocks.length > 0 ? blocks : [content];
+
+                blocksToParse.forEach(block => {
+                    const measurementMatch = block.match(/name\s*=\s*["']([^"']+)["']/);
+                    // Match specific model and serial tags
+                    const modelMatch = block.match(/airIRSCUnitIdentModelNumber\s*=\s*["']([^"']+)["']/) ||
+                        block.match(/model\s*=\s*["']([^"']+)["']/) ||
+                        block.match(/tag_1\s*=\s*["']([^"']+)["']/);
+                    const snMatch = block.match(/airIRSCUnitIdentSerialNumber\s*=\s*["']([^"']+)["']/) ||
+                        block.match(/device_sn\s*=\s*["']([^"']+)["']/) ||
+                        block.match(/tag_2\s*=\s*["']([^"']+)["']/);
+
+                    if (measurementMatch || snMatch) {
+                        const m = measurementMatch ? measurementMatch[1] : 'snmp';
+                        const t1 = modelMatch ? modelMatch[1] : 'Unknown Model';
+                        const t2 = snMatch ? snMatch[1] : path.basename(file, path.extname(file));
+
+                        // Avoid duplicates from same file
+                        if (!equipment.find(e => e.measurement === m && e.tag_1 === t1 && e.tag_2 === t2)) {
+                            equipment.push({
+                                measurement: m,
+                                tag_1: t1,
+                                tag_2: t2,
+                                source: 'telegraf.d'
+                            });
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error(`Error parsing config file ${file}:`, err);
+            }
+        });
+    }
+
+    // 2. Add current device from settings.json if it's not already there
+    try {
+        const settings = getSettings();
+        const snTag = settings.tags.find(t => t.key === 'device_sn' || t.key === 'airIRSCUnitIdentSerialNumber' || t.key === 'tag_2');
+        const modelTag = settings.tags.find(t => t.key === 'model' || t.key === 'airIRSCUnitIdentModelNumber' || t.key === 'tag_1');
+
+        if (snTag) {
+            const m = settings.measurement || 'snmp';
+            const t1 = modelTag ? modelTag.value : 'Current Device';
+            const t2 = snTag.value;
+
+            // If an entry with the same serial number already exists from files, 
+            // the version in files is usually more authoritative/permanent.
+            const exists = equipment.some(e => e.tag_2 === t2);
+            if (!exists) {
+                equipment.push({
+                    measurement: m,
+                    tag_1: t1,
+                    tag_2: t2,
+                    source: 'settings'
+                });
+            }
+        }
+    } catch (e) { }
+
+    res.json(equipment);
+});
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     if (err instanceof multer.MulterError) {

@@ -848,6 +848,84 @@
             margin-right: 0.5rem;
         }
 
+        /* Dashboard Styles */
+        .equipment-tree {
+            padding: 1.5rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+
+        .tree-node {
+            margin-bottom: 0.5rem;
+            user-select: none;
+        }
+
+        .tree-node-content {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .tree-node-content:hover {
+            background: #f1f5f9;
+            border-color: var(--border);
+        }
+
+        .tree-node-children {
+            margin-left: 1.5rem;
+            padding-left: 0.5rem;
+            border-left: 1px dashed var(--border);
+            display: none;
+        }
+
+        .tree-node.expanded>.tree-node-children {
+            display: block;
+        }
+
+        .node-icon {
+            width: 20px;
+            height: 20px;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .node-toggle {
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+            transition: transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tree-node.expanded>.tree-node-content .node-toggle {
+            transform: rotate(90deg);
+        }
+
+        .node-label {
+            font-weight: 500;
+            color: var(--text-main);
+            flex: 1;
+        }
+
+        .node-badge {
+            font-size: 0.75rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
         /* Root OID Combobox-like input */
         .oid-input-wrapper {
             position: relative;
@@ -883,7 +961,9 @@
         <div class="top-section">
             <!-- Tab Navigation -->
             <nav class="tab-navigation">
-                <button class="tab-btn active" onclick="switchTab('snmp-tab')" data-i18n="tab_snmp">SNMP
+                <button class="tab-btn active" id="dashboard-tab-btn" onclick="switchTab('dashboard-tab')"
+                    data-i18n="tab_dashboard">Dashboard</button>
+                <button class="tab-btn" id="snmp-tab-btn" onclick="switchTab('snmp-tab')" data-i18n="tab_snmp">SNMP
                     Settings</button>
                 <button class="tab-btn" onclick="switchTab('protocol-tab')" data-i18n="tab_protocol">Line
                     Protocol</button>
@@ -915,8 +995,26 @@
         </div>
 
         <div class="tab-content">
+            <!-- Dashboard Tab -->
+            <div id="dashboard-tab" class="tab-pane active">
+                <div class="settings-card" style="max-width: 1000px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <h2 data-i18n="dashboard_title">Infrastructure Dashboard</h2>
+                        <button class="btn-secondary" onclick="loadDashboardData()"
+                            data-i18n="refresh_btn">Refresh</button>
+                    </div>
+                    <div id="equipmentTree" class="equipment-tree">
+                        <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                            <p data-i18n="loading_dashboard">Loading infrastructure data...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- SNMP Settings Tab -->
-            <div id="snmp-tab" class="tab-pane active">
+            <div id="snmp-tab" class="tab-pane">
                 <div class="snmp-header-area">
                     <div class="controls-wrapper">
                         <div class="controls">
@@ -1151,6 +1249,9 @@
                                 style="flex: 1; color: #3b82f6; font-weight: 500;">
                             <button id="saveLpSettingsBtn" data-i18n="save_btn"
                                 data-i18n-tip="save_lp_tip">Save</button>
+                            <button id="save-device-config-lp-btn" class="btn-secondary"
+                                style="background: #3b82f6; color: white; border: none;" data-i18n="save_device_btn"
+                                data-i18n-tip="save_device_tip">Save as Device Config</button>
                             <button id="downloadLpTomlBtn" data-i18n="download_toml" class="btn-secondary"
                                 data-i18n-tip="download_toml_tip">Download
                                 TOML</button>
@@ -1228,23 +1329,55 @@
                 <div class="settings-card">
                     <div class="settings-group">
                         <h3 data-i18n="language_label">Language</h3>
-                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <div style="display: flex; flex-direction: row; gap: 1rem; flex-wrap: wrap;">
                             <label class="lang-option"
-                                style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; flex: 1; min-width: 120px; justify-content: center;">
                                 <input type="radio" name="language" value="en" checked onclick="changeLanguage('en')">
                                 <span style="font-weight: 500;">English</span>
                             </label>
                             <label class="lang-option"
-                                style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; flex: 1; min-width: 120px; justify-content: center;">
                                 <input type="radio" name="language" value="ru" onclick="changeLanguage('ru')">
                                 <span style="font-weight: 500;">Русский</span>
                             </label>
                             <label class="lang-option"
-                                style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer;">
+                                style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; flex: 1; min-width: 120px; justify-content: center;">
                                 <input type="radio" name="language" value="kk" onclick="changeLanguage('kk')">
                                 <span style="font-weight: 500;">Қазақша</span>
                             </label>
                         </div>
+                    </div>
+
+                    <div class="settings-group" style="margin-top: 2rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                            <h3 data-i18n="config_management">Telegraf Configuration Management</h3>
+                            <button class="btn-secondary" onclick="fetchTelegrafConfigs()" data-i18n="refresh_btn"
+                                style="padding: 0.4rem 0.8rem;">Refresh</button>
+                        </div>
+                        <div id="telegrafConfigsList" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="text-align: center; padding: 1rem; color: var(--text-muted);"
+                                data-i18n="no_configs">No configurations found</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Config View Modal -->
+            <div id="configViewModal" class="mib-modal">
+                <div class="mib-modal-content" style="max-width: 800px;">
+                    <div class="mib-modal-header">
+                        <h3 id="configViewTitle" data-i18n="config_content_title">Config Content</h3>
+                        <button class="btn-secondary" onclick="closeConfigViewer()"
+                            style="padding: 0.25rem 0.5rem;">✕</button>
+                    </div>
+                    <div class="mib-modal-body" style="padding: 0;">
+                        <textarea id="configViewArea" readonly
+                            style="width: 100%; height: 500px; padding: 1rem; border: none; font-family: monospace; font-size: 0.85rem; background: #f8fafc; resize: none;"></textarea>
+                    </div>
+                    <div class="mib-modal-footer">
+                        <button class="btn-secondary" onclick="closeConfigViewer()"
+                            data-i18n="cancel_btn">Close</button>
                     </div>
                 </div>
             </div>
@@ -1326,6 +1459,11 @@
             const translations = {
                 en: {
                     title: "SNMP Viewer",
+                    tab_dashboard: "Dashboard",
+                    dashboard_title: "Infrastructure Dashboard",
+                    loading_dashboard: "Loading infrastructure data...",
+                    refresh_btn: "Refresh",
+                    no_equipment: "No equipment found. Add a device in SNMP Settings to get started.",
                     header_h1: "SNMP Data Viewer",
                     header_p: "Explore your network equipment data visually",
                     settings_btn: "Settings",
@@ -1430,10 +1568,20 @@
                     btn_delete: "Delete",
                     status_active: "Active",
                     status_file: "File",
-                    confirm_delete_single: "Are you sure you want to delete this MIB file?"
+                    confirm_delete_single: "Are you sure you want to delete this MIB file?",
+                    config_management: "Telegraf Configuration Management",
+                    no_configs: "No configurations found",
+                    view_config: "View",
+                    confirm_delete_config: "Are you sure you want to delete this configuration?",
+                    config_content_title: "Config Content"
                 },
                 ru: {
                     title: "SNMP Просмотрщик",
+                    tab_dashboard: "Дашборд",
+                    dashboard_title: "Панель управления инфраструктурой",
+                    loading_dashboard: "Загрузка данных об инфраструктуре...",
+                    refresh_btn: "Обновить",
+                    no_equipment: "Оборудование не найдено. Добавьте устройство в настройках SNMP.",
                     header_h1: "Просмотр данных SNMP",
                     header_p: "Визуальное исследование данных сетевого оборудования",
                     settings_btn: "Настройки",
@@ -1538,10 +1686,20 @@
                     btn_delete: "Удалить",
                     status_active: "Активен",
                     status_file: "Файл",
-                    confirm_delete_single: "Вы действительно хотите удалить этот MIB файл?"
+                    confirm_delete_single: "Вы действительно хотите удалить этот MIB файл?",
+                    config_management: "Управление конфигурациями Telegraf",
+                    no_configs: "Конфигурации не найдены",
+                    view_config: "Просмотр",
+                    confirm_delete_config: "Вы уверены, что хотите удалить эту конфигурацию?",
+                    config_content_title: "Содержимое конфигурации"
                 },
                 kk: {
                     title: "SNMP Көруші",
+                    tab_dashboard: "Бақылау тақтасы",
+                    dashboard_title: "Инфрақұрылымдық бақылау тақтасы",
+                    loading_dashboard: "Инфрақұрылым деректері жүктелуде...",
+                    refresh_btn: "Жаңарту",
+                    no_equipment: "Жабдық табылмады. Бастау үшін SNMP параметрлеріне құрылғы қосыңыз.",
                     header_h1: "SNMP деректерін көру",
                     header_p: "Желілік жабдық деректерін визуалды түрде зерттеу",
                     settings_btn: "Параметрлер",
@@ -1646,7 +1804,12 @@
                     btn_delete: "Жою",
                     status_active: "Белсенді",
                     status_file: "Файл",
-                    confirm_delete_single: "Бұл MIB файлын жоюыңызға сенімдісіз бе?"
+                    confirm_delete_single: "Бұл MIB файлын жоюыңызға сенімдісіз бе?",
+                    config_management: "Telegraf конфигурацияларын басқару",
+                    no_configs: "Конфигурациялар табылмады",
+                    view_config: "Көру",
+                    confirm_delete_config: "Бұл конфигурацияны жоюыңызға сенімдісіз бе?",
+                    config_content_title: "Конфигурация мазмұны"
                 }
             };
 
@@ -1730,6 +1893,104 @@
                 applyTranslations(lang);
             }
 
+            function loadDashboardData() {
+                const treeContainer = document.getElementById('equipmentTree');
+                treeContainer.innerHTML = `
+                    <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                        <div class="spinner" style="margin: 0 auto 1rem;"></div>
+                        <p data-i18n="loading_dashboard">${translations[currentLang].loading_dashboard}</p>
+                    </div>
+                `;
+
+                fetch('/api/equipment')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data || data.length === 0) {
+                            treeContainer.innerHTML = `<div style="text-align: center; padding: 3rem; color: var(--text-muted);" data-i18n="no_equipment">${translations[currentLang].no_equipment}</div>`;
+                            return;
+                        }
+
+                        // Group by measurement then by tag_1
+                        const hierarchy = {};
+                        data.forEach(item => {
+                            const measurement = item.measurement || 'default';
+                            const tag1 = item.tag_1 || 'Unknown Model';
+                            const tag2 = item.tag_2 || 'Unknown Serial';
+
+                            if (!hierarchy[measurement]) hierarchy[measurement] = {};
+                            if (!hierarchy[measurement][tag1]) hierarchy[measurement][tag1] = [];
+                            hierarchy[measurement][tag1].push(item);
+                        });
+
+                        treeContainer.innerHTML = '';
+                        Object.keys(hierarchy).forEach(measurement => {
+                            const mNode = createTreeNode(measurement, 'Site', 'database');
+                            const mChildrenCont = mNode.querySelector('.tree-node-children');
+
+                            Object.keys(hierarchy[measurement]).forEach(tag1 => {
+                                const t1Node = createTreeNode(tag1, 'Model', 'package');
+                                const t1ChildrenCont = t1Node.querySelector('.tree-node-children');
+
+                                hierarchy[measurement][tag1].forEach(item => {
+                                    const t2Node = createTreeNode(item.tag_2, 'Serial', 'cpu', true);
+                                    t2Node.onclick = () => {
+                                        // Potential improvement: select this device in SNMP Settings
+                                        console.log('Selected device:', item);
+                                    };
+                                    t1ChildrenCont.appendChild(t2Node);
+                                });
+
+                                mChildrenCont.appendChild(t1Node);
+                            });
+
+                            treeContainer.appendChild(mNode);
+                        });
+
+                        // Expand all by default for now
+                        document.querySelectorAll('.tree-node').forEach(n => n.classList.add('expanded'));
+                    })
+                    .catch(err => {
+                        console.error('Failed to load dashboard:', err);
+                        treeContainer.innerHTML = `<div class="error-message" style="display: block;">Error loading dashboard: ${err.message}</div>`;
+                    });
+            }
+
+            function createTreeNode(label, type, icon, isLeaf = false) {
+                const node = document.createElement('div');
+                node.className = `tree-node ${isLeaf ? 'leaf' : ''}`;
+
+                const icons = {
+                    database: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21c4.418 0 8-1.791 8-4s-3.582-4-8-4-8 1.791-8 4 3.582 4 8 4zM12 13c4.418 0 8-1.791 8-4s-3.582-4-8-4-8 1.791-8 4 3.582 4 8 4zM12 5c4.418 0 8-1.791 8-4s-3.582-4-8-4-8 1.791-8 4 3.582 4 8 4z"></path></svg>`,
+                    package: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`,
+                    cpu: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>`,
+                    chevron: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>`
+                };
+
+                node.innerHTML = `
+                    <div class="tree-node-content">
+                        ${!isLeaf ? `<div class="node-toggle">${icons.chevron}</div>` : '<div style="width: 16px;"></div>'}
+                        <div class="node-icon">${icons[icon]}</div>
+                        <div class="node-label">${label}</div>
+                        <div class="node-badge">${type}</div>
+                    </div>
+                    ${!isLeaf ? '<div class="tree-node-children"></div>' : ''}
+                `;
+
+                if (!isLeaf) {
+                    node.querySelector('.tree-node-content').onclick = (e) => {
+                        e.stopPropagation();
+                        node.classList.toggle('expanded');
+                    };
+                }
+
+                return node;
+            }
+
+            // Initialization
+            document.addEventListener('DOMContentLoaded', () => {
+                loadDashboardData();
+            });
+
             function switchTab(tabId) {
                 // Update buttons
                 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -1746,6 +2007,14 @@
                 document.getElementById(tabId).classList.add('active');
 
                 localStorage.setItem('activeTab', tabId);
+
+                // Load data specific to tab
+                if (tabId === 'general-tab') {
+                    if (typeof fetchTelegrafConfigs === 'function') fetchTelegrafConfigs();
+                }
+                if (tabId === 'dashboard-tab') {
+                    if (typeof loadDashboardData === 'function') loadDashboardData();
+                }
             }
 
             // Initialize language and tab
@@ -2677,7 +2946,7 @@
                 }
             });
 
-            saveDeviceConfigBtn.addEventListener('click', async () => {
+            async function saveDeviceConfig() {
                 const configData = getTelegrafConfigData();
                 const snTag = configData.tags.find(t => t.key === 'device_sn');
 
@@ -2701,6 +2970,10 @@
 
                     if (res.ok) {
                         alert(translations[currentLang].telegraf_save_success);
+                        // Refresh configs list if open
+                        if (document.getElementById('general-tab').classList.contains('active')) {
+                            fetchTelegrafConfigs();
+                        }
                     } else {
                         const data = await res.json();
                         alert("Error: " + (data.error || "Unknown error"));
@@ -2708,7 +2981,10 @@
                 } catch (err) {
                     alert("Error: " + err.message);
                 }
-            });
+            }
+
+            saveDeviceConfigBtn.addEventListener('click', saveDeviceConfig);
+            document.getElementById('save-device-config-lp-btn').addEventListener('click', saveDeviceConfig);
 
             function getTelegrafConfigData() {
                 const measurement = lpMeasurement.value.trim();
@@ -3533,7 +3809,94 @@
                 if (event.target == mibModal) {
                     closeMibBrowser();
                 }
+                if (event.target == document.getElementById('configViewModal')) {
+                    closeConfigViewer();
+                }
             };
+
+            // --- Telegraf Config Management ---
+            async function fetchTelegrafConfigs() {
+                const listContainer = document.getElementById('telegrafConfigsList');
+                try {
+                    const res = await fetch('/api/telegraf/configs');
+                    const files = await res.json();
+                    renderTelegrafConfigs(files);
+                } catch (err) {
+                    console.error("Failed to fetch configs", err);
+                    listContainer.innerHTML = `<div style="padding: 1rem; color: #ef4444; text-align: center;">Error loading configurations</div>`;
+                }
+            }
+
+            function renderTelegrafConfigs(files) {
+                const listContainer = document.getElementById('telegrafConfigsList');
+                if (!files || files.length === 0) {
+                    listContainer.innerHTML = `<div style="text-align: center; padding: 1rem; color: var(--text-muted);" data-i18n="no_configs">${translations[currentLang].no_configs}</div>`;
+                    return;
+                }
+
+                listContainer.innerHTML = '';
+                files.forEach(file => {
+                    const item = document.createElement('div');
+                    item.className = 'mib-item';
+                    item.style.padding = '0.75rem';
+                    item.innerHTML = `
+                        <div style="flex: 1; display: flex; align-items: center; gap: 0.75rem;">
+                            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#64748b">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span style="font-weight: 500;">${file}</span>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button class="btn-mini" onclick="viewConfig('${file}')" data-i18n="view_config">${translations[currentLang].view_config || 'View'}</button>
+                            <button class="btn-mini" style="background: #fee2e2; color: #ef4444; border: 1px solid #fca5a5;" onclick="deleteTelegrafConfig('${file}')" data-i18n="btn_delete">${translations[currentLang].btn_delete}</button>
+                        </div>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+
+            async function viewConfig(filename) {
+                try {
+                    const res = await fetch(`/api/telegraf/configs/${filename}`);
+                    const data = await res.json();
+                    if (res.ok) {
+                        document.getElementById('configViewTitle').textContent = filename;
+                        document.getElementById('configViewArea').value = data.content;
+                        document.getElementById('configViewModal').style.display = 'flex';
+                    } else {
+                        alert("Error: " + data.error);
+                    }
+                } catch (err) {
+                    alert("Error: " + err.message);
+                }
+            }
+
+            async function deleteTelegrafConfig(filename) {
+                if (!confirm(translations[currentLang].confirm_delete_config || "Are you sure?")) return;
+                try {
+                    const res = await fetch(`/api/telegraf/configs/${filename}`, { method: 'DELETE' });
+                    if (res.ok) {
+                        fetchTelegrafConfigs();
+                        // Also refresh dashboard as list of devices changed
+                        loadDashboardData();
+                    } else {
+                        const data = await res.json();
+                        alert("Error: " + data.error);
+                    }
+                } catch (err) {
+                    alert("Error: " + err.message);
+                }
+            }
+
+            function closeConfigViewer() {
+                document.getElementById('configViewModal').style.display = 'none';
+            }
+
+            // Expose functions to global for onclick handlers
+            window.viewConfig = viewConfig;
+            window.deleteTelegrafConfig = deleteTelegrafConfig;
+            window.fetchTelegrafConfigs = fetchTelegrafConfigs;
+            window.closeConfigViewer = closeConfigViewer;
         </script>
     </div>
 </body>

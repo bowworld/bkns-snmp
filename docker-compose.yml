@@ -31,17 +31,5 @@ services:
       - influxdb-data:/var/lib/influxdb2
     restart: unless-stopped
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    ports:
-      - "3001:3000"
-    volumes:
-      - grafana-storage:/var/lib/grafana
-    depends_on:
-      - influxdb
-    restart: unless-stopped
-
 volumes:
   influxdb-data:
-  grafana-storage:
