@@ -3,6 +3,7 @@ const snmp = require('net-snmp');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { spawn, exec } = require('child_process');
 const MibManager = require('./lib/mib-manager');
 
 const app = express();
@@ -210,6 +211,90 @@ app.post('/api/settings', (req, res) => {
     }
     saveSettings(settings);
     res.json({ message: 'Settings saved' });
+});
+
+// Telegraf Management
+let telegrafProcess = null;
+let telegrafLogs = [];
+
+app.post('/api/telegraf/save', (req, res) => {
+    const { path: filePath, content } = req.body;
+    if (!filePath || !content) return res.status(400).json({ error: "Path and content required" });
+
+    try {
+        const dir = path.dirname(filePath);
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        fs.writeFileSync(filePath, content, 'utf8');
+        res.json({ message: "Config saved successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/telegraf/start', (req, res) => {
+    const { path: filePath } = req.body;
+    if (!filePath) return res.status(400).json({ error: "Config path required" });
+
+    if (telegrafProcess) {
+        return res.status(400).json({ error: "Telegraf is already running" });
+    }
+
+    try {
+        telegrafLogs = [];
+        telegrafProcess = spawn('telegraf', ['--config', filePath]);
+
+        telegrafProcess.on('error', (err) => {
+            console.error('Failed to start Telegraf:', err);
+            telegrafLogs.push({ type: 'stderr', msg: `Error: ${err.message}. Is Telegraf installed?`, time: new Date().toISOString() });
+            telegrafProcess = null;
+        });
+
+        telegrafProcess.stdout.on('data', (data) => {
+            const log = data.toString();
+            console.log(`Telegraf: ${log}`);
+            telegrafLogs.push({ type: 'stdout', msg: log, time: new Date().toISOString() });
+            if (telegrafLogs.length > 1000) telegrafLogs.shift();
+        });
+
+        telegrafProcess.stderr.on('data', (data) => {
+            const log = data.toString();
+            console.error(`Telegraf Error: ${log}`);
+            telegrafLogs.push({ type: 'stderr', msg: log, time: new Date().toISOString() });
+            if (telegrafLogs.length > 1000) telegrafLogs.shift();
+        });
+
+        telegrafProcess.on('close', (code) => {
+            console.log(`Telegraf process exited with code ${code}`);
+            telegrafProcess = null;
+            telegrafLogs.push({ type: 'info', msg: `Process exited with code ${code}`, time: new Date().toISOString() });
+        });
+
+        res.json({ message: "Telegraf started" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/telegraf/stop', (req, res) => {
+    if (!telegrafProcess) {
+        return res.status(400).json({ error: "Telegraf is not running" });
+    }
+
+    try {
+        telegrafProcess.kill();
+        res.json({ message: "Telegraf stop signal sent" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/telegraf/status', (req, res) => {
+    res.json({
+        running: !!telegrafProcess,
+        logs: telegrafLogs.slice(-100) // Return last 100 logs
+    });
 });
 
 // Error handling middleware

@@ -31,5 +31,7 @@
         "6"
       ]
     }
-  ]
+  ],
+  "agentConfig": "[agent]\n  interval = \"5s\"\n  round_interval = true\n  metric_batch_size = 1000\n  metric_buffer_limit = 10000\n  collection_jitter = \"0s\"\n  flush_interval = \"10s\"\n  flush_jitter = \"0s\"\n  precision = \"\"\n  hostname = \"\"\n  omit_hostname = false",
+  "outputConfig": "[[outputs.influxdb_v2]]\n  urls = [\"http://influxdb:8086\"]\n  token = \"my-super-secret-auth-token\"\n  organization = \"bkns\"\n  bucket = \"snmp-data\""
 }
