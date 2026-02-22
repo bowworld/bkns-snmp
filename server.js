@@ -6,6 +6,10 @@ const fs = require('fs');
 const { spawn, exec } = require('child_process');
 const MibManager = require('./lib/mib-manager');
 const SiteManager = require('./lib/site-manager');
+const InfluxClient = require('./lib/influx-client');
+const Watcher = require('./lib/watcher');
+const SnapshotGenerator = require('./lib/snapshot');
+const Notifier = require('./lib/notifier');
 
 const app = express();
 const port = 3000;
@@ -87,6 +91,75 @@ if (!fs.existsSync(siteFile) && fs.existsSync(settingsFile)) {
 } else {
     siteManager = new SiteManager(siteFile);
 }
+
+// InfluxDB connection
+const influxClient = new InfluxClient({
+    url: process.env.INFLUX_URL || 'http://influxdb:8086',
+    token: process.env.INFLUX_TOKEN || 'my-super-secret-auth-token',
+    org: process.env.INFLUX_ORG || 'bkns',
+    bucket: process.env.INFLUX_BUCKET || 'snmp-data'
+});
+
+// Snapshot output directory
+const snapshotDir = path.join(__dirname, 'snapshots');
+if (!fs.existsSync(snapshotDir)) fs.mkdirSync(snapshotDir, { recursive: true });
+
+// Snapshot Generator
+const snapshotGenerator = new SnapshotGenerator({ influxClient, outputDir: snapshotDir });
+
+// Watcher setup
+function getRulesForWatcher() {
+    const site = siteManager.getSite();
+    const rules = [];
+    for (const device of site.devices) {
+        if (!device.rules || device.rules.length === 0) continue;
+        for (const rule of device.rules) {
+            rules.push({
+                device_sn: device.device_sn,
+                measurement: device.measurement,
+                room: device.room,
+                rule
+            });
+        }
+    }
+    return rules;
+}
+
+const watcher = new Watcher({
+    influxClient,
+    getRules: getRulesForWatcher,
+    checkInterval: 30000
+});
+
+// Handle incidents
+watcher.on('incident', async (incident) => {
+    console.log(`[INCIDENT] ${incident.device_sn}: ${incident.rule.description} (value=${incident.value})`);
+    try {
+        const siteData = siteManager.getSite();
+        const result = await snapshotGenerator.generate(incident, siteData);
+        console.log(`[SNAPSHOT] Generated: ${result.filename}`);
+
+        siteManager.data.lastSnapshotTime = incident.timestamp;
+        siteManager._save();
+
+        if (siteData.site.contact && siteData.site.smtp && siteData.site.smtp.host) {
+            const notifier = new Notifier({
+                transport: siteData.site.smtp,
+                from: `bkns@${siteData.site.smtp.host}`
+            });
+            await notifier.send({
+                to: siteData.site.contact,
+                meta: result.meta,
+                attachmentPath: result.filePath
+            });
+            console.log(`[EMAIL] Sent to ${siteData.site.contact}`);
+        }
+    } catch (e) {
+        console.error('[INCIDENT ERROR]', e.message);
+    }
+});
+
+watcher.on('error', (e) => console.error('[WATCHER ERROR]', e.message));
 
 // Configure multer
 const storage = multer.diskStorage({
@@ -326,6 +399,58 @@ app.post('/api/calculator', (req, res) => {
         snapshotRaw: Math.round(snapshotRaw),
         snapshotGzip: Math.round(snapshotGzip)
     });
+});
+
+// === Watcher Rules API ===
+app.post('/api/site/devices/:id/rules', (req, res) => {
+    try {
+        siteManager.addRule(req.params.id, req.body);
+        res.json({ message: 'Rule added' });
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+app.delete('/api/site/devices/:id/rules/:ruleId', (req, res) => {
+    try {
+        siteManager.removeRule(req.params.id, req.params.ruleId);
+        res.json({ message: 'Rule removed' });
+    } catch (e) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
+// === Watcher API ===
+app.post('/api/watcher/start', (req, res) => {
+    watcher.start();
+    res.json({ message: 'Watcher started' });
+});
+
+app.post('/api/watcher/stop', (req, res) => {
+    watcher.stop();
+    res.json({ message: 'Watcher stopped' });
+});
+
+app.get('/api/watcher/status', (req, res) => {
+    res.json(watcher.getStatus());
+});
+
+// === Snapshots API ===
+app.get('/api/snapshots', (req, res) => {
+    try {
+        if (!fs.existsSync(snapshotDir)) return res.json([]);
+        const files = fs.readdirSync(snapshotDir).filter(f => f.endsWith('.tar.gz')).sort().reverse();
+        res.json(files);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/snapshots/:filename', (req, res) => {
+    const safeName = req.params.filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const filePath = path.join(snapshotDir, safeName);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Not found' });
+    res.download(filePath);
 });
 
 // Telegraf Management
