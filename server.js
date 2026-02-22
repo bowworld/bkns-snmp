@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { spawn, exec } = require('child_process');
 const MibManager = require('./lib/mib-manager');
+const SiteManager = require('./lib/site-manager');
 
 const app = express();
 const port = 3000;
@@ -74,6 +75,17 @@ const availableMibs = mibManager.getMibFiles();
 if (availableMibs.length > 0) {
     console.log(`Pre-loading ${availableMibs.length} MIB files...`);
     mibManager.loadMibs(availableMibs);
+}
+
+// Initialize Site Manager (auto-migrate from settings.json if needed)
+const siteFile = path.join(__dirname, 'site.json');
+let siteManager;
+if (!fs.existsSync(siteFile) && fs.existsSync(settingsFile)) {
+    console.log('Migrating settings.json → site.json...');
+    siteManager = SiteManager.migrateFromSettings(settingsFile, siteFile);
+    console.log('Migration complete.');
+} else {
+    siteManager = new SiteManager(siteFile);
 }
 
 // Configure multer
@@ -219,21 +231,130 @@ app.post('/api/settings', (req, res) => {
     res.json({ message: 'Settings saved' });
 });
 
+// API: Site Management
+app.get('/api/site', (req, res) => {
+    res.json(siteManager.getSite());
+});
+
+app.put('/api/site/info', (req, res) => {
+    try {
+        siteManager.updateSiteInfo(req.body);
+        res.json({ message: 'Site info updated' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.post('/api/site/rooms', (req, res) => {
+    try {
+        siteManager.addRoom(req.body);
+        res.json({ message: 'Room added' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.delete('/api/site/rooms/:id', (req, res) => {
+    try {
+        siteManager.removeRoom(req.params.id);
+        res.json({ message: 'Room removed' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.post('/api/site/devices', (req, res) => {
+    try {
+        siteManager.addDevice(req.body);
+        res.json({ message: 'Device added' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.put('/api/site/devices/:id', (req, res) => {
+    try {
+        siteManager.updateDevice(req.params.id, req.body);
+        res.json({ message: 'Device updated' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.delete('/api/site/devices/:id', (req, res) => {
+    try {
+        siteManager.removeDevice(req.params.id);
+        res.json({ message: 'Device removed' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+app.put('/api/site/polling', (req, res) => {
+    try {
+        siteManager.updatePolling(req.body);
+        res.json({ message: 'Polling settings updated' });
+    } catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+
+// API: Calculator
+app.post('/api/calculator', (req, res) => {
+    const { devices, metrics, interval, retentionDays, snapshotHours } = req.body;
+    const d = devices || 10;
+    const m = metrics || 12;
+    const i = interval || 5;
+    const r = retentionDays || 30;
+    const s = snapshotHours || 48;
+    const bytesPerPoint = 100;
+
+    const pointsPerDay = d * m * (86400 / i);
+    const rawPerDay = pointsPerDay * bytesPerPoint;
+    const influxPerDay = rawPerDay * 0.15;
+    const influxTotal = influxPerDay * r;
+
+    const snapshotPoints = d * m * (s * 3600 / i);
+    const snapshotRaw = snapshotPoints * bytesPerPoint;
+    const snapshotGzip = snapshotRaw / 15;
+
+    res.json({
+        pointsPerDay,
+        influxPerDay: Math.round(influxPerDay),
+        influxTotal: Math.round(influxTotal),
+        snapshotPoints,
+        snapshotRaw: Math.round(snapshotRaw),
+        snapshotGzip: Math.round(snapshotGzip)
+    });
+});
+
 // Telegraf Management
 let telegrafProcess = null;
 let telegrafLogs = [];
 
 app.post('/api/telegraf/save', (req, res) => {
-    const { path: filePath, content } = req.body;
-    if (!filePath || !content) return res.status(400).json({ error: "Path and content required" });
+    const { path: filePath, filename, content } = req.body;
+    if (!content) return res.status(400).json({ error: "Content required" });
+
+    // Determine filename: prefer explicit 'filename', fallback to basename of legacy 'path'
+    const rawName = filename || (filePath ? path.basename(filePath) : null);
+    if (!rawName) return res.status(400).json({ error: "Filename or path required" });
+
+    // Sanitize: only allow alphanumeric, dash, underscore, dot — no path separators
+    const safeName = rawName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    if (!safeName || safeName.startsWith('.')) {
+        return res.status(400).json({ error: "Invalid filename" });
+    }
+
+    // Always write inside telegraf.d/ — no path traversal possible
+    const safePath = path.join(telegrafDir, safeName);
 
     try {
-        const dir = path.dirname(filePath);
-        if (!fs.existsSync(dir)) {
-            fs.mkdirSync(dir, { recursive: true });
+        if (!fs.existsSync(telegrafDir)) {
+            fs.mkdirSync(telegrafDir, { recursive: true });
         }
-        fs.writeFileSync(filePath, content, 'utf8');
-        res.json({ message: "Config saved successfully" });
+        fs.writeFileSync(safePath, content, 'utf8');
+        res.json({ message: "Config saved successfully", filename: safeName });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

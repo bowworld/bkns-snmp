@@ -983,6 +983,7 @@
         <div class="top-section">
             <!-- Tab Navigation -->
             <nav class="tab-navigation">
+                <button class="tab-btn" id="site-tab-btn" onclick="switchTab('site-tab')">Site Setup</button>
                 <button class="tab-btn active" id="dashboard-tab-btn" onclick="switchTab('dashboard-tab')"
                     data-i18n="tab_dashboard">Dashboard</button>
                 <button class="tab-btn" id="snmp-tab-btn" onclick="switchTab('snmp-tab')" data-i18n="tab_snmp">SNMP
@@ -1029,6 +1030,131 @@
         </div>
 
         <div class="tab-content">
+            <!-- Site Setup Tab -->
+            <div id="site-tab" class="tab-pane">
+                <div class="settings-card" style="max-width: 1000px;">
+                    <h3>Site Information</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                        <div>
+                            <label class="field-label">Site ID</label>
+                            <input type="text" id="site-id" class="text-input" placeholder="e.g. customerX-dc1">
+                        </div>
+                        <div>
+                            <label class="field-label">Site Name</label>
+                            <input type="text" id="site-name" class="text-input" placeholder="e.g. ЦОД Заказчик X">
+                        </div>
+                        <div>
+                            <label class="field-label">Contact Email</label>
+                            <input type="email" id="site-contact" class="text-input" placeholder="e.g. admin@customer.kz">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveSiteInfo()">Save Site Info</button>
+                </div>
+
+                <div class="settings-card" style="max-width: 1000px; margin-top: 1rem;">
+                    <h3>Rooms</h3>
+                    <table id="rooms-table" style="width: 100%; border-collapse: collapse; margin-bottom: 0.75rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 0.5rem;">ID</th>
+                                <th style="padding: 0.5rem;">Name</th>
+                                <th style="padding: 0.5rem; width: 80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="rooms-tbody"></tbody>
+                    </table>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <input type="text" id="new-room-id" class="text-input" placeholder="Room ID" style="width: 150px;">
+                        <input type="text" id="new-room-name" class="text-input" placeholder="Room Name" style="width: 200px;">
+                        <button class="btn" onclick="addRoom()">+ Add Room</button>
+                    </div>
+                </div>
+
+                <div class="settings-card" style="max-width: 1000px; margin-top: 1rem;">
+                    <h3>Devices</h3>
+                    <table id="devices-table" style="width: 100%; border-collapse: collapse; margin-bottom: 0.75rem;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                                <th style="padding: 0.5rem;">S/N</th>
+                                <th style="padding: 0.5rem;">Model</th>
+                                <th style="padding: 0.5rem;">Type</th>
+                                <th style="padding: 0.5rem;">Room</th>
+                                <th style="padding: 0.5rem;">IP</th>
+                                <th style="padding: 0.5rem; width: 80px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="devices-tbody"></tbody>
+                    </table>
+                </div>
+
+                <div class="settings-card" style="max-width: 1000px; margin-top: 1rem;">
+                    <h3>Polling Settings</h3>
+                    <div style="display: flex; gap: 1rem; align-items: end; margin-bottom: 1rem;">
+                        <div>
+                            <label class="field-label">Polling Interval</label>
+                            <select id="polling-interval" class="text-input" style="width: 120px;">
+                                <option value="1">1 sec</option>
+                                <option value="5" selected>5 sec</option>
+                                <option value="10">10 sec</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Snapshot Window (hours)</label>
+                            <input type="number" id="polling-snapshot-window" class="text-input" value="48" min="1" max="720" style="width: 120px;">
+                        </div>
+                        <button class="btn btn-primary" onclick="savePolling()">Save Polling</button>
+                    </div>
+                </div>
+
+                <div class="settings-card" style="max-width: 1000px; margin-top: 1rem;">
+                    <h3>Storage Calculator</h3>
+                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-bottom: 1rem;">
+                        <div>
+                            <label class="field-label">Devices</label>
+                            <input type="number" id="calc-devices" class="text-input" value="10" min="1" oninput="updateCalculator()">
+                        </div>
+                        <div>
+                            <label class="field-label">Metrics/device</label>
+                            <input type="number" id="calc-metrics" class="text-input" value="12" min="1" oninput="updateCalculator()">
+                        </div>
+                        <div>
+                            <label class="field-label">Interval (sec)</label>
+                            <select id="calc-interval" class="text-input" onchange="updateCalculator()">
+                                <option value="1">1</option>
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Retention</label>
+                            <select id="calc-retention" class="text-input" onchange="updateCalculator()">
+                                <option value="7">7 days</option>
+                                <option value="30" selected>30 days</option>
+                                <option value="90">90 days</option>
+                                <option value="365">365 days</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="field-label">Snapshot (hours)</label>
+                            <input type="number" id="calc-snapshot" class="text-input" value="48" min="1" oninput="updateCalculator()">
+                        </div>
+                    </div>
+                    <div id="calc-results" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div style="background: var(--bg); border-radius: 8px; padding: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: var(--text-muted);">InfluxDB Storage</h4>
+                            <div id="calc-influx-daily" style="font-size: 0.9rem;"></div>
+                            <div id="calc-influx-total" style="font-size: 1.2rem; font-weight: 600; margin-top: 0.25rem;"></div>
+                        </div>
+                        <div style="background: var(--bg); border-radius: 8px; padding: 1rem;">
+                            <h4 style="margin: 0 0 0.5rem 0; color: var(--text-muted);">Snapshot Size</h4>
+                            <div id="calc-snap-raw" style="font-size: 0.9rem;"></div>
+                            <div id="calc-snap-gzip" style="font-size: 1.2rem; font-weight: 600; margin-top: 0.25rem;"></div>
+                            <div id="calc-snap-verdict" style="margin-top: 0.25rem; font-size: 0.85rem; font-weight: 500;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Dashboard Tab -->
             <div id="dashboard-tab" class="tab-pane active">
                 <div class="settings-card" style="max-width: 1000px;">
@@ -1932,6 +2058,170 @@
             function changeLanguage(lang) {
                 applyTranslations(lang);
             }
+
+            // ==================== Site Setup ====================
+            let siteData = null;
+
+            async function loadSiteData() {
+                try {
+                    const res = await fetch('/api/site');
+                    siteData = await res.json();
+                    renderSiteTab();
+                } catch (e) {
+                    console.error('Failed to load site data:', e);
+                }
+            }
+
+            function renderSiteTab() {
+                if (!siteData) return;
+                document.getElementById('site-id').value = siteData.site.id || '';
+                document.getElementById('site-name').value = siteData.site.name || '';
+                document.getElementById('site-contact').value = siteData.site.contact || '';
+
+                // Polling
+                document.getElementById('polling-interval').value = siteData.polling.interval || 5;
+                document.getElementById('polling-snapshot-window').value = siteData.polling.snapshotWindow || 48;
+
+                // Rooms
+                const roomsTbody = document.getElementById('rooms-tbody');
+                roomsTbody.innerHTML = '';
+                (siteData.rooms || []).forEach(room => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid var(--border)';
+                    tr.innerHTML = `
+                        <td style="padding: 0.5rem;">${room.id}</td>
+                        <td style="padding: 0.5rem;">${room.name}</td>
+                        <td style="padding: 0.5rem;"><button class="btn" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; color: #ef4444;" onclick="removeRoom('${room.id}')">Remove</button></td>
+                    `;
+                    roomsTbody.appendChild(tr);
+                });
+
+                // Devices
+                const devicesTbody = document.getElementById('devices-tbody');
+                devicesTbody.innerHTML = '';
+                (siteData.devices || []).forEach(dev => {
+                    const tr = document.createElement('tr');
+                    tr.style.borderBottom = '1px solid var(--border)';
+                    tr.innerHTML = `
+                        <td style="padding: 0.5rem; font-family: monospace;">${dev.device_sn}</td>
+                        <td style="padding: 0.5rem;">${dev.model}</td>
+                        <td style="padding: 0.5rem;">${dev.type}</td>
+                        <td style="padding: 0.5rem;">${dev.room}</td>
+                        <td style="padding: 0.5rem; font-family: monospace;">${dev.ip}</td>
+                        <td style="padding: 0.5rem;"><button class="btn" style="font-size: 0.75rem; padding: 0.25rem 0.5rem; color: #ef4444;" onclick="removeDevice('${dev.id}')">Remove</button></td>
+                    `;
+                    devicesTbody.appendChild(tr);
+                });
+
+                // Update calculator defaults from site data
+                document.getElementById('calc-devices').value = siteData.devices.length > 0 ? siteData.devices.length : 10;
+                document.getElementById('calc-interval').value = siteData.polling.interval || 5;
+                document.getElementById('calc-snapshot').value = siteData.polling.snapshotWindow || 48;
+                updateCalculator();
+            }
+
+            async function saveSiteInfo() {
+                const body = {
+                    id: document.getElementById('site-id').value.trim(),
+                    name: document.getElementById('site-name').value.trim(),
+                    contact: document.getElementById('site-contact').value.trim()
+                };
+                try {
+                    const res = await fetch('/api/site/info', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                    const data = await res.json();
+                    if (res.ok) alert('Site info saved');
+                    else alert(data.error);
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            async function addRoom() {
+                const id = document.getElementById('new-room-id').value.trim();
+                const name = document.getElementById('new-room-name').value.trim();
+                if (!id) return alert('Room ID is required');
+                try {
+                    const res = await fetch('/api/site/rooms', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, name: name || id }) });
+                    const data = await res.json();
+                    if (res.ok) {
+                        document.getElementById('new-room-id').value = '';
+                        document.getElementById('new-room-name').value = '';
+                        loadSiteData();
+                    } else alert(data.error);
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            async function removeRoom(roomId) {
+                if (!confirm('Remove room ' + roomId + '?')) return;
+                try {
+                    const res = await fetch('/api/site/rooms/' + roomId, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (res.ok) loadSiteData();
+                    else alert(data.error);
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            async function removeDevice(deviceId) {
+                if (!confirm('Remove device ' + deviceId + '?')) return;
+                try {
+                    const res = await fetch('/api/site/devices/' + deviceId, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (res.ok) loadSiteData();
+                    else alert(data.error);
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            async function savePolling() {
+                const interval = parseInt(document.getElementById('polling-interval').value);
+                const snapshotWindow = parseInt(document.getElementById('polling-snapshot-window').value);
+                try {
+                    const res = await fetch('/api/site/polling', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ interval, snapshotWindow }) });
+                    const data = await res.json();
+                    if (res.ok) alert('Polling settings saved');
+                    else alert(data.error);
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            function formatBytes(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + ' MB';
+                return (bytes / 1073741824).toFixed(1) + ' GB';
+            }
+
+            function updateCalculator() {
+                const d = parseInt(document.getElementById('calc-devices').value) || 0;
+                const m = parseInt(document.getElementById('calc-metrics').value) || 0;
+                const i = parseInt(document.getElementById('calc-interval').value) || 5;
+                const r = parseInt(document.getElementById('calc-retention').value) || 30;
+                const s = parseInt(document.getElementById('calc-snapshot').value) || 48;
+                const bpp = 100;
+
+                const pointsPerDay = d * m * (86400 / i);
+                const influxPerDay = pointsPerDay * bpp * 0.15;
+                const influxTotal = influxPerDay * r;
+                const snapshotRaw = d * m * (s * 3600 / i) * bpp;
+                const snapshotGzip = snapshotRaw / 15;
+
+                document.getElementById('calc-influx-daily').textContent = formatBytes(influxPerDay) + ' / day';
+                document.getElementById('calc-influx-total').textContent = 'Total: ' + formatBytes(influxTotal);
+                document.getElementById('calc-snap-raw').textContent = 'Raw: ' + formatBytes(snapshotRaw);
+                document.getElementById('calc-snap-gzip').textContent = 'Gzip: ' + formatBytes(snapshotGzip);
+
+                const verdict = document.getElementById('calc-snap-verdict');
+                const gzipMB = snapshotGzip / 1048576;
+                if (gzipMB < 10) {
+                    verdict.textContent = 'Excellent for email';
+                    verdict.style.color = '#16a34a';
+                } else if (gzipMB < 25) {
+                    verdict.textContent = 'Acceptable for email';
+                    verdict.style.color = '#d97706';
+                } else {
+                    verdict.textContent = 'Too large — reduce window or interval';
+                    verdict.style.color = '#dc2626';
+                }
+            }
+
+            // Load site data on page load
+            loadSiteData();
 
             function loadDashboardData() {
                 const treeContainer = document.getElementById('equipmentTree');
@@ -3024,13 +3314,15 @@
                 const configPath = telegrafConfigPath.value.trim();
                 if (!configPath) return alert("Please specify path");
 
+                // Extract just the filename — server always saves inside telegraf.d/
+                const configFilename = configPath.split('/').pop().split('\\').pop();
                 const configContent = generateTelegrafToml(getTelegrafConfigData());
 
                 try {
                     const res = await fetch('/api/telegraf/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path: configPath, content: configContent })
+                        body: JSON.stringify({ filename: configFilename, content: configContent })
                     });
 
                     const contentType = res.headers.get("content-type");
@@ -3059,8 +3351,6 @@
                 }
 
                 const fileName = `device_${snTag.value.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.conf`;
-                // Explicitly use the telegraf.d directory
-                const configPath = `./telegraf.d/${fileName}`;
 
                 // For device configs, we DONT include agent and output (they should be in main telegraf.conf)
                 const configContent = generateTelegrafToml(configData, { includeAgent: false, includeOutput: false });
@@ -3069,15 +3359,59 @@
                     const res = await fetch('/api/telegraf/save', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ path: configPath, content: configContent })
+                        body: JSON.stringify({ filename: fileName, content: configContent })
                     });
 
                     if (res.ok) {
+                        // Auto-register device in site.json if not already there
+                        try {
+                            const siteRes = await fetch('/api/site');
+                            const site = await siteRes.json();
+                            const exists = site.devices.find(d => d.device_sn === snTag.value);
+                            if (!exists) {
+                                const modelTag = configData.tags.find(t => t.key === 'model' || t.key === 'airIRSCUnitIdentModelNumber');
+                                const ip = configData.agents && configData.agents.length > 0 ? configData.agents[0] : '';
+                                const snmpConfig = configData.snmp_version === '2c' || configData.snmp_version === '2'
+                                    ? { version: '2c', community: configData.community || 'public' }
+                                    : configData.snmp_version === '3'
+                                        ? { version: '3', user: configData.v3 ? configData.v3.user : '' }
+                                        : { version: '2c', community: configData.community || 'public' };
+                                // Ensure default room exists
+                                if (!site.rooms || site.rooms.length === 0) {
+                                    await fetch('/api/site/rooms', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ id: 'default', name: 'Default Room' })
+                                    });
+                                }
+                                const deviceRes = await fetch('/api/site/devices', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        device_sn: snTag.value,
+                                        model: modelTag ? modelTag.value : '',
+                                        type: configData.measurement || 'snmp',
+                                        room: site.rooms && site.rooms.length > 0 ? site.rooms[0].id : 'default',
+                                        ip: ip,
+                                        snmp: snmpConfig,
+                                        measurement: configData.measurement || 'snmp'
+                                    })
+                                });
+                                if (deviceRes.ok) {
+                                    console.log('Device auto-registered in site.json:', snTag.value);
+                                }
+                            }
+                        } catch (siteErr) {
+                            console.warn('Could not auto-register device in site.json:', siteErr);
+                        }
+
                         alert(translations[currentLang].telegraf_save_success);
                         // Refresh configs list if open
                         if (document.getElementById('general-tab').classList.contains('active')) {
                             fetchTelegrafConfigs();
                         }
+                        // Refresh site data if loaded
+                        if (typeof loadSiteData === 'function') loadSiteData();
                     } else {
                         const data = await res.json();
                         alert("Error: " + (data.error || "Unknown error"));

@@ -1,96 +1,220 @@
-# CLAUDE.md
+# CLAUDE.md — bkns-snmp
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## Бизнес-контекст
 
-## Project Overview
+**Vicom Plus** — сервисная компания, обслуживающая инженерное оборудование дата-центров (кондиционеры, ИБП, PDU, сенсоры).
 
-SNMP Viewer is a web-based tool for visually exploring and managing data from network equipment via the SNMP protocol. It provides an interface for scanning devices, viewing OID trees, and managing MIB files. The tool maps hardware parameters into TOML format compatible with Telegraf for storage in InfluxDB.
+**Проблема**: Заказчики присылают сервисные заявки без указания конкретной единицы оборудования (серийный номер, порядковый номер). Невозможно определить:
+- какое именно устройство требует ремонта
+- «историю болезни» устройства — что предшествовало ошибке
+- контекст инцидента (состояние соседнего оборудования в момент сбоя)
 
-## Tech Stack
+Единственный источник информации — отчёты инженеров из предыдущих выездов.
 
-- **Runtime**: Node.js 20
-- **Backend**: Express.js
-- **SNMP Library**: net-snmp (supports v1, v2c, v3)
-- **File Upload**: multer
-- **Frontend**: Vanilla HTML/CSS/JavaScript (single-page in `public/index.html`)
-- **Deployment**: Docker & Docker Compose
+**Ограничение**: Security-политики заказчиков запрещают подключение серверов ЦОД к интернету. Софт работает **только локально** в дата-центре.
 
-## Project Structure
+## Концепция решения
+
+BKNS-сервер устанавливается локально в дата-центре заказчика и выполняет:
+
+1. **Непрерывный сбор данных** — Telegraf опрашивает всё SNMP-оборудование, пишет time series в InfluxDB
+2. **Два типа данных**:
+   - **Дискретные** — текстовые/enum значения из SNMP OID (пример: кондиционер online=2, offline=1). Позволяют расследовать инциденты, видя состояние всей группы оборудования
+   - **Числовые** — температура, влажность, напряжение, наработка и т.д.
+3. **Слепки (snapshots)** — при возникновении инцидента система формирует «слепок»:
+   - текущее состояние оборудования
+   - история работы между предыдущим слепком и текущим
+   - данные time series за период
+4. **Оповещение** — ответственный представитель заказчика получает email с описанием инцидента и файлом слепка
+5. **Анализ в Vicom Plus** — центральный сервер компании получает слепок (вручную или через заказчика), расшифровывает и анализирует, предоставляя инженеру полную картину для решения проблемы
+
+**Итого**: Локальный мониторинг → слепок при инциденте → передача в сервисную компанию → анализ и ремонт.
+
+## Текущее состояние проекта
+
+Реализован **snmp-viewer** — инструмент для сканирования оборудования через SNMP, визуализации OID-деревьев, управления MIB-файлами и генерации TOML-конфигов для Telegraf.
+
+**Реализовано**:
+- Multi-device модель (`site.json`) с комнатами, устройствами, polling настройками
+- Автоматическая миграция из `settings.json` → `site.json` при первом запуске
+- Таб Site Setup с калькулятором размеров хранилища и слепков
+- Автоматическая регистрация устройств в site.json при сохранении Telegraf конфига
+- Path traversal защита в `/api/telegraf/save`
+
+**Ещё не реализовано**: Watcher (детекция инцидентов), генерация слепков, email-оповещения, центральный сервер анализа.
+
+**Дизайн-документы**: `docs/plans/2026-02-22-multi-device-snapshot-design.md`
+
+## Структура проекта
 
 ```
-snmp-viewer/
-├── server.js           # Express server with SNMP walk API endpoints
-├── lib/
-│   └── mib-manager.js  # MIB file loading and OID translation
-├── public/
-│   ├── index.html      # Single-page frontend application
-│   └── fixed-layout.css
-├── mibs/               # Directory for uploaded MIB files
-├── Dockerfile
-├── docker-compose.yml
-└── package.json
+bkns-snmp/
+├── snmp-viewer/              # Основное веб-приложение
+│   ├── server.js             # Express-сервер, SNMP walk, Telegraf management
+│   ├── lib/mib-manager.js    # Загрузка/парсинг MIB, трансляция OID → имена
+│   ├── public/
+│   │   ├── index.html        # SPA (~4000 строк, vanilla JS/HTML/CSS)
+│   │   └── fixed-layout.css
+│   ├── mibs/                 # Загруженные MIB-файлы
+│   ├── telegraf.d/           # Сгенерированные конфиги Telegraf
+│   ├── lib/site-manager.js   # CRUD site.json, миграция из settings.json
+│   ├── site.json             # Реестр площадки (devices, rooms, polling)
+│   ├── settings.json         # Legacy настройки (мигрируется в site.json)
+│   ├── Dockerfile            # Node.js 20 + Telegraf + snmp-mibs-downloader
+│   ├── Dockerfile.telegraf   # Telegraf с MIB-ами (не используется в compose)
+│   ├── docker-compose.yml    # snmp-viewer + InfluxDB 2.7 + Grafana
+│   ├── test-mib.js           # Тест MIB-менеджера
+│   ├── test-parsing.js       # Тест парсинга MIB
+│   ├── test-site-manager.js  # Тесты SiteManager (12 тестов)
+│   └── package.json
+├── snmp_results/             # Сохранённые результаты SNMP-сканов (txt, xml)
+└── tomls/                    # Готовые Telegraf конфиги устройств
+    └── device_yk0716110141.conf  # Пример: APC ACSC101 cooling unit
 ```
 
-## Common Commands
+## Стек
+
+- **Backend**: Node.js 20, Express 4, net-snmp 3.8, multer 2
+- **Frontend**: Vanilla HTML/CSS/JS (single-page, Inter font, CSS variables)
+- **Инфраструктура**: Docker Compose (snmp-viewer:3000, InfluxDB:8086, Grafana:3001)
+- **Мониторинг**: Telegraf → InfluxDB v2 → Grafana
+
+## Команды
 
 ```bash
-# Install dependencies
-npm install
+cd snmp-viewer
 
-# Start the server (production)
-npm start
+npm install          # Зависимости
+npm start            # Продакшен (порт 3000)
+npm run dev          # Разработка (--watch)
 
-# Start with file watching (development)
-npm run dev
-
-# Docker deployment
-docker compose up -d --build
+docker compose up -d --build   # Полный стек
 ```
 
-## API Endpoints
+## API-эндпоинты (server.js)
 
-- `GET /api/mibs` - List available MIB files
-- `POST /api/upload-mib` - Upload a MIB file (multipart/form-data)
-- `DELETE /api/mibs` - Delete MIB files (JSON body: `{ files: [...] }`)
-- `GET /api/snmp-walk` - Perform SNMP walk with parameters:
-  - `target` - Device IP address
-  - `oid` - Root OID to walk
-  - `version` - SNMP version (1, 2c, 3)
-  - `community` - Community string (v1/v2c)
-  - `mibs` - Comma-separated list of MIB files to use
-  - `v3_user`, `v3_auth_proto`, `v3_auth_pwd`, `v3_priv_proto`, `v3_priv_pwd` - SNMPv3 parameters
+| Метод | Путь | Описание |
+|-------|------|----------|
+| GET | `/api/snmp-walk` | SNMP walk (target, oid, version, community, mibs, v3_*) |
+| GET | `/api/mibs` | Список MIB-файлов |
+| GET | `/api/mib-tree` | Дерево OID из загруженных MIB |
+| GET | `/api/mibs/active` | Загруженные модули |
+| POST | `/api/mibs/load` | Загрузить MIB в память |
+| POST | `/api/mibs/unload` | Выгрузить модуль |
+| POST | `/api/upload-mib` | Загрузить MIB-файл (multipart) |
+| DELETE | `/api/mibs` | Удалить MIB-файлы |
+| GET/POST | `/api/settings` | Чтение/сохранение настроек устройства (legacy) |
+| GET | `/api/site` | Полные данные site.json |
+| PUT | `/api/site/info` | Обновить site info (id, name, contact) |
+| POST | `/api/site/rooms` | Добавить комнату |
+| DELETE | `/api/site/rooms/:id` | Удалить комнату |
+| POST | `/api/site/devices` | Добавить устройство |
+| PUT | `/api/site/devices/:id` | Обновить устройство |
+| DELETE | `/api/site/devices/:id` | Удалить устройство |
+| PUT | `/api/site/polling` | Обновить polling настройки |
+| POST | `/api/calculator` | Расчёт размеров хранилища и слепков |
+| GET | `/api/equipment` | Список оборудования из telegraf.d и settings |
+| POST | `/api/equipment/status` | Проверка онлайн-статуса по IP (sysUpTime) |
+| POST | `/api/telegraf/save` | Сохранить конфиг Telegraf |
+| POST | `/api/telegraf/start` | Запустить Telegraf |
+| POST | `/api/telegraf/stop` | Остановить Telegraf |
+| GET | `/api/telegraf/status` | Статус и логи Telegraf |
+| GET | `/api/telegraf/configs` | Список конфигов в telegraf.d |
+| GET | `/api/telegraf/configs/:filename` | Содержимое конфига |
+| DELETE | `/api/telegraf/configs/:filename` | Удалить конфиг |
 
-## Key Implementation Details
+## Ключевые модули
 
-### MIB Manager (`lib/mib-manager.js`)
-- Uses net-snmp's built-in module store for MIB parsing
-- Translates numeric OIDs to human-readable names
-- Handles enum value mapping from MIB definitions
-- Supports `.txt`, `.mib`, and `.my` file extensions
+### MibManager (lib/mib-manager.js)
+- Обёртка над `net-snmp.createModuleStore()`
+- Загружает MIB-файлы (.mib, .txt, .my) с разрешением зависимостей
+- Трансляция OID ↔ символические имена
+- Поддержка enum-маппинга из SYNTAX
+- Построение дерева OID (`getMibTree()`)
+- Системные MIB-пути: `/usr/share/snmp/mibs`, `/var/lib/mibs/ietf`, `/var/lib/mibs/iana`
 
-### SNMP Walk Processing (`server.js`)
-- The `processToTables()` function groups OID results into tables using a heuristic:
-  1. Groups by parent OID (column identification)
-  2. Groups columns by their parent (table identification)
-  3. Aligns rows by index values
+### SiteManager (lib/site-manager.js)
+- CRUD для site.json: площадка (id, name, contact), комнаты, устройства, polling
+- Автоматическая миграция из legacy `settings.json`
+- Валидация: interval ∈ {1, 5, 10}, уникальность room/device id
+- Защита: нельзя удалить комнату с привязанными устройствами
+- Генерация device id: `${type}_${sn_lowercase}`, config_file: `device_${sn}.conf`
 
-### Data Flow
-1. User selects MIB files and configures SNMP parameters
-2. Server performs SNMP subtree walk
-3. Results enriched with MIB metadata (names, descriptions, enums)
-4. Data grouped into tables for display
-5. Can export to CSV/TXT or generate Telegraf TOML config
+### processToTables (server.js:565)
+- Эвристическая группировка OID в таблицы
+- Алгоритм: OID → колонка (parent) → таблица (parent колонки) → строки (по индексу)
 
-## InfluxDB Integration Context
+### Frontend (public/index.html)
+- SPA с табами: Site Setup, Dashboard, Scan, Config, MIBs, Telegraf
+- Поддержка i18n (en/kk)
+- MIB Browser (дерево OID с поиском)
+- Генерация Telegraf TOML из UI
+- Экспорт в CSV/TXT
+- Dual scrollbars для широких таблиц
 
-The tool produces TOML configurations for Telegraf with:
-- **Measurement**: Equipment class (ups, pdu, cooling, etc.)
-- **Tags**: `device_sn` (serial number), `metric` (parameter name)
-- **Fields**: Numeric values stored raw; text/events converted to 0/1
+## Формат данных
 
-## Development Notes
+### site.json (основной реестр площадки)
+```json
+{
+  "site": { "id": "customerX-dc1", "name": "ЦОД Заказчик X", "contact": "admin@customer.kz" },
+  "rooms": [{ "id": "hall1", "name": "Зал 1" }],
+  "devices": [{
+    "id": "cooling_yk0716110141", "device_sn": "YK0716110141", "model": "ACSC101",
+    "type": "cooling", "room": "hall1", "ip": "192.168.2.1",
+    "snmp": { "version": "2c", "community": "public" },
+    "measurement": "cooling", "config_file": "device_yk0716110141.conf"
+  }],
+  "polling": { "interval": 5, "snapshotWindow": 48 },
+  "lastSnapshotTime": null
+}
+```
 
-- The application runs on port 3000
-- MIB files are stored in the `mibs/` directory
-- Frontend is a single HTML file with embedded JavaScript
-- No build step required for frontend changes
+### settings.json (legacy, мигрируется в site.json)
+```json
+{
+  "measurement": "cooling",
+  "tags": [{ "key": "device_sn", "value": "YK0716110141" }],
+  "fields": [{ "key": "airIRSCUnitStatusCoolOutput", "value": "1.3.6.1.4.1.318.1.1.13.3.4.1.2.2.0" }],
+  "tableMappings": [],
+  "agentConfig": "[agent]\\n  interval = \"5s\"...",
+  "outputConfig": "[[outputs.influxdb_v2]]\\n  urls = [\"http://influxdb:8086\"]..."
+}
+```
+
+### Telegraf TOML (tomls/*.conf)
+```toml
+[[inputs.snmp]]
+  agents = ["192.168.2.1"]
+  version = 2
+  community = "public"
+  name = "cooling"
+  [inputs.snmp.tags]
+    device_sn = "YK0716110141"
+  [[inputs.snmp.field]]
+    name = "airIRSCUnitStatusCoolOutput"
+    oid = "1.3.6.1.4.1.318.1.1.13.3.4.1.2.2.0"
+```
+
+### InfluxDB Line Protocol
+```
+cooling,device_sn=YK0716110141 airIRSCUnitStatusCoolOutput=value timestamp
+```
+
+## Docker Compose
+
+- **snmp-viewer** (порт 3000): Node.js + Telegraf, volumes маппят mibs/, public/, lib/, server.js, settings.json, ../tomls → telegraf.d
+- **InfluxDB** (порт 8086): org=bkns, bucket=snmp-data, token=my-super-secret-auth-token
+- **Grafana** (порт 3001): admin/admin
+
+## Целевое оборудование
+
+Сейчас настроено для APC InRow Cooling (ACSC101), OID-ветка `1.3.6.1.4.1.318.1.1.13` (APC PowerNet). Поддерживается любое SNMP-оборудование: UPS, PDU, cooling, сенсоры.
+
+## Правила разработки
+
+- Frontend — один файл `index.html`, без билд-процесса
+- Стили через CSS variables в `:root`
+- Новый функционал по возможности добавлять в существующие файлы
+- Конфиги Telegraf — TOML формат, по одному файлу на устройство
+- Тег `device_sn` (серийный номер) обязателен для каждого устройства

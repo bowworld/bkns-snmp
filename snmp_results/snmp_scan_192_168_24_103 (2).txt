@@ -1,0 +1,77 @@
+SNMP SCAN RESULTS
+Target: 192.168.24.103
+Date: 27.01.2026, 12:58:15
+==========================================
+
+DATA GROUP: airIRAlarms (1.3.6.1.4.1.318.1.1.13.3.1)
+------------------------------------------
+| Index      | airIRAlarmConditionsTableSize | 
+| ---------- | ----------------------------- | 
+| 0          | 1                             | 
+
+DATA GROUP: airIRAlarmConditionsEntry (1.3.6.1.4.1.318.1.1.13.3.1.2.1)
+------------------------------------------
+| Index      | airIRAlarmConditionsIndex | airIREventCode  | airIRAlarmDescription | 
+| ---------- | ------------------------- | --------------- | --------------------- | 
+| 1          | 1                         | 9012            | Air Filter Run Hours Violation | 
+
+DATA GROUP: airIRSCUnitIdent (1.3.6.1.4.1.318.1.1.13.3.4.1.1)
+------------------------------------------
+| Index      | airIRSCUnitIdentName | airIRSCUnitIdentLocation | airIRSCUnitIdentModelNumber | airIRSCUnitIdentSerialNumber | airIRSCUnitIdentFirmwareRevision | airIRSCUnitIdentHardwareRevision | airIRSCUnitIdentManufactureDate | 
+| ---------- | -------------------- | ------------------------ | --------------------------- | ---------------------------- | -------------------------------- | -------------------------------- | ------------------------------- | 
+| 0          | COOLING              | COD VICOM                | ACSC101                     | YK0716110141                 | 2.10.0                           | C8                               | 10/16/2008                      | 
+
+DATA GROUP: airIRSCUnitStatus (1.3.6.1.4.1.318.1.1.13.3.4.1.2)
+------------------------------------------
+| Index      | airIRSCUnitStatusOperateMode | airIRSCUnitStatusCoolOutput | airIRSCUnitStatusCoolDemand | airIRSCUnitStatusAirFlowUS | airIRSCUnitStatusAirFlowMetric | airIRSCUnitStatusRackInletTempUS | airIRSCUnitStatusRackInletTempMetric | airIRSCUnitStatusSupplyAirTempUS | airIRSCUnitStatusSupplyAirTempMetric | airIRSCUnitStatusReturnAirTempUS | airIRSCUnitStatusReturnAirTempMetric | airIRSCUnitStatusSuctionTempUS | airIRSCUnitStatusSuctionTempMetric | airIRSCUnitStatusSuperheatTempUS | airIRSCUnitStatusSuperheatTempMetric | airIRSCUnitStatusContainmtDPUS | airIRSCUnitStatusContainmtDPMetric | airIRSCUnitStatusFilterDPUS | airIRSCUnitStatusFilterDPMetric | airIRSCUnitStatusSuctionPressureUS | airIRSCUnitStatusSuctionPressureMetric | airIRSCUnitStatusDischargePressureUS | airIRSCUnitStatusDischargePressureMetric | airIRSCUnitStatusEvaporatorFanSpeed | airIRSCUnitStatusCondenserFanSpeed | airIRSCUnitStatusInputState | airIRSCUnitStatusOutputState | airIRSCUnitStatusCondOutletTempUS | airIRSCUnitStatusCondOutletTempMetric | airIRSCUnitStatusCondInletTempUS | airIRSCUnitStatusCondInletTempMetric | airIRSCUnitStatusCompressor | 
+| ---------- | ---------------------------- | --------------------------- | --------------------------- | -------------------------- | ------------------------------ | -------------------------------- | ------------------------------------ | -------------------------------- | ------------------------------------ | -------------------------------- | ------------------------------------ | ------------------------------ | ---------------------------------- | -------------------------------- | ------------------------------------ | ------------------------------ | ---------------------------------- | --------------------------- | ------------------------------- | ---------------------------------- | -------------------------------------- | ------------------------------------ | ---------------------------------------- | ----------------------------------- | ---------------------------------- | --------------------------- | ---------------------------- | --------------------------------- | ------------------------------------- | -------------------------------- | ------------------------------------ | --------------------------- | 
+| 0          | 2                            | 56                          | 56                          | 1195                       | 564                            | 713                              | 218                                  | 673                              | 196                                  | 706                              | 214                                  | 688                            | 204                                | 154                              | 86                                   | -1                             | -1                                 | 5                           | 5                               | 151                                | 1040                                   | 390                                  | 2688                                     | 996                                 | 819                                | 1                           | 1                            | 1098                              | 432                                   | 772                              | 251                                  | 2                           | 
+
+DATA GROUP: airIRSCUnitRunHours (1.3.6.1.4.1.318.1.1.13.3.4.1.3)
+------------------------------------------
+| Index      | airIRSCUnitRunHoursAirFilter | airIRSCUnitRunHoursEvaporatorFan1 | airIRSCUnitRunHoursEvaporatorFan2 | airIRSCUnitRunHoursEvaporatorFan3 | airIRSCUnitRunHoursCondenserFan1 | airIRSCUnitRunHoursCondenserFan2 | airIRSCUnitRunHoursCondenserFan3 | airIRSCUnitRunHoursFanPowerSupplyLeft | airIRSCUnitRunHoursFanPowerSupplyRight | airIRSCUnitRunHoursCondensatePump | airIRSCUnitRunHoursCompressor | 
+| ---------- | ---------------------------- | --------------------------------- | --------------------------------- | --------------------------------- | -------------------------------- | -------------------------------- | -------------------------------- | ------------------------------------- | -------------------------------------- | --------------------------------- | ----------------------------- | 
+| 0          | 24961                        | 77984                             | 77983                             | 77984                             | 75054                            | 75053                            | 75054                            | 80070                                 | 80735                                  | 62                                | 74584                         | 
+
+DATA GROUP: airIRSCUnitServiceIntervals (1.3.6.1.4.1.318.1.1.13.3.4.1.4)
+------------------------------------------
+| Index      | airIRSCUnitServiceIntervalsAirFilter | airIRSCUnitServiceIntervalsAirFilterAlarm | 
+| ---------- | ------------------------------------ | ----------------------------------------- | 
+| 0          | 18                                   | 1                                         | 
+
+DATA GROUP: airIRSCUnitThresholds (1.3.6.1.4.1.318.1.1.13.3.4.1.5)
+------------------------------------------
+| Index      | airIRSCUnitThresholdsRackInletHighTempUS | airIRSCUnitThresholdsRackInletHighTempMetric | airIRSCUnitThresholdsSupplyAirHighTempUS | airIRSCUnitThresholdsSupplyAirHighTempMetric | airIRSCUnitThresholdsReturnAirHighTempUS | airIRSCUnitThresholdsReturnAirHighTempMetric | 
+| ---------- | ---------------------------------------- | -------------------------------------------- | ---------------------------------------- | -------------------------------------------- | ---------------------------------------- | -------------------------------------------- | 
+| 0          | 806                                      | 270                                          | 770                                      | 250                                          | 1040                                     | 400                                          | 
+
+DATA GROUP: airIRSCUnitSetpoints (1.3.6.1.4.1.318.1.1.13.3.4.1.6)
+------------------------------------------
+| Index      | airIRSCUnitSetptsCoolSetpointUS | airIRSCUnitSetptsCoolSetpointMetric | airIRSCUnitSetptsCoolDeadbandUS | airIRSCUnitSetptsCoolDeadbandMetric | airIRSCUnitSetptsFanSpeedPreference | airIRSCUnitSetptsSupplyAirSetpointUS | airIRSCUnitSetptsSupplyAirSetpointMetric | 
+| ---------- | ------------------------------- | ----------------------------------- | ------------------------------- | ----------------------------------- | ----------------------------------- | ------------------------------------ | ---------------------------------------- | 
+| 0          | 680                             | 200                                 | 18                              | 10                                  | 3                                   | 572                                  | 140                                      | 
+
+DATA GROUP: airIRSCUnitConfig (1.3.6.1.4.1.318.1.1.13.3.4.1.7)
+------------------------------------------
+| Index      | airIRSCUnitConfigConfigurationType | airIRSCUnitConfigCapacityControlType | airIRSCUnitConfigStartupDelay | airIRSCUnitConfigIdleOnLeakDetect | airIRSCUnitConfigInputNormalState | airIRSCUnitConfigOutputNormalState | airIRSCUnitConfigOutputSource | airIRSCUnitConfigAltitudeUS | airIRSCUnitConfigAltitudeMetric | airIRSCUnitConfigOpControl | 
+| ---------- | ---------------------------------- | ------------------------------------ | ----------------------------- | --------------------------------- | --------------------------------- | ---------------------------------- | ----------------------------- | --------------------------- | ------------------------------- | -------------------------- | 
+| 0          | 3                                  | 2                                    | 0                             | 1                                 | 1                                 | 1                                  | 2                             | 2953                        | 900                             | 2                          | 
+
+DATA GROUP: airIRSCGroupStatus (1.3.6.1.4.1.318.1.1.13.3.4.2.1)
+------------------------------------------
+| Index      | airIRSCGroupStatusCoolOutput | airIRSCGroupStatusCoolDemand | airIRSCGroupStatusAirFlowUS | airIRSCGroupStatusAirFlowMetric | airIRSCGroupStatusMaxRackInletTempUS | airIRSCGroupStatusMaxRackInletTempMetric | airIRSCGroupStatusMinRackInletTempUS | airIRSCGroupStatusMinRackInletTempMetric | airIRSCGroupStatusMaxReturnAirTempUS | airIRSCGroupStatusMaxReturnAirTempMetric | airIRSCGroupStatusMinReturnAirTempUS | airIRSCGroupStatusMinReturnAirTempMetric | 
+| ---------- | ---------------------------- | ---------------------------- | --------------------------- | ------------------------------- | ------------------------------------ | ---------------------------------------- | ------------------------------------ | ---------------------------------------- | ------------------------------------ | ---------------------------------------- | ------------------------------------ | ---------------------------------------- | 
+| 0          | 56                           | 56                           | 1194                        | 564                             | 712                                  | 218                                      | 712                                  | 218                                      | 706                                  | 214                                      | 706                                  | 214                                      | 
+
+DATA GROUP: airIRSCGroupSetpoints (1.3.6.1.4.1.318.1.1.13.3.4.2.2)
+------------------------------------------
+| Index      | airIRSCGroupSetptsCoolSetpointUS | airIRSCGroupSetptsCoolSetpointMetric | airIRSCGroupSetptsCoolDeadbandUS | airIRSCGroupSetptsCoolDeadbandMetric | airIRSCGroupSetptsFanSpeedPreference | airIRSCGroupSetptsSupplyAirSetpointUS | airIRSCGroupSetptsSupplyAirSetpointMetric | 
+| ---------- | -------------------------------- | ------------------------------------ | -------------------------------- | ------------------------------------ | ------------------------------------ | ------------------------------------- | ----------------------------------------- | 
+| 0          | 680                              | 200                                  | 18                               | 10                                   | 3                                    | 572                                   | 140                                       | 
+
+DATA GROUP: airIRSCGroupConfig (1.3.6.1.4.1.318.1.1.13.3.4.2.3)
+------------------------------------------
+| Index      | airIRSCGroupConfigNumberofCoolingUnits | airIRSCGroupConfigConfigurationType | airIRSCGroupConfigCapacityControlType | airIRSCGroupConfigAltitudeUS | airIRSCGroupConfigAltitudeMetric | airIRSCGroupConfigFanSpeedControl | 
+| ---------- | -------------------------------------- | ----------------------------------- | ------------------------------------- | ---------------------------- | -------------------------------- | --------------------------------- | 
+| 0          | 1                                      | 3                                   | 2                                     | 2953                         | 900                              | 1                                 | 
+
