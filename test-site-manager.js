@@ -108,6 +108,74 @@ assert(migrated.rooms[0].id === 'default', 'migration: room id is default');
 
 fs.rmSync(migrateDir, { recursive: true });
 
+// Test 13: Добавление устройства для тестов правил
+sm.addDevice({
+    device_sn: 'RULE_TEST_001',
+    model: 'ACSC101',
+    type: 'cooling',
+    room: 'hall1',
+    ip: '192.168.2.10',
+    measurement: 'cooling'
+});
+const ruleDeviceId = 'cooling_ruletest001';
+assert(sm.getSite().devices.find(d => d.id === ruleDeviceId), 'rule test device created');
+
+// Test 14: Добавление правила к устройству
+sm.addRule(ruleDeviceId, {
+    id: 'r1',
+    metric: 'airIRSCUnitStatusCoolOutput',
+    type: 'discrete',
+    alert_on: [1],
+    severity: 'critical',
+    description: 'Cooling unit went offline'
+});
+const ruleDevice = sm.getSite().devices.find(d => d.id === ruleDeviceId);
+assert(ruleDevice.rules.length === 1, 'rule added to device');
+assert(ruleDevice.rules[0].id === 'r1', 'rule id is r1');
+
+// Test 15: Добавление второго правила
+sm.addRule(ruleDeviceId, {
+    id: 'r2',
+    metric: 'airIRSCUnitStatusTemp',
+    type: 'threshold',
+    severity: 'warning',
+    description: 'Temperature too high'
+});
+assert(sm.getSite().devices.find(d => d.id === ruleDeviceId).rules.length === 2, 'second rule added');
+
+// Test 16: Дублирующий rule id отклоняется
+let ruleError = false;
+try {
+    sm.addRule(ruleDeviceId, {
+        id: 'r1',
+        metric: 'duplicate',
+        type: 'discrete'
+    });
+} catch (e) { ruleError = true; }
+assert(ruleError, 'duplicate rule id rejected');
+
+// Test 17: Удаление правила
+sm.removeRule(ruleDeviceId, 'r1');
+const afterRemove = sm.getSite().devices.find(d => d.id === ruleDeviceId);
+assert(afterRemove.rules.length === 1, 'rule removed');
+assert(afterRemove.rules[0].id === 'r2', 'remaining rule is r2');
+
+// Test 18: getDevicesWithRules возвращает правильные устройства
+const devicesWithRules = sm.getDevicesWithRules();
+assert(devicesWithRules.length === 1, 'getDevicesWithRules returns 1 device');
+assert(devicesWithRules[0].id === ruleDeviceId, 'correct device returned');
+
+// Test 19: Устройство без правил не попадает в getDevicesWithRules
+sm.removeRule(ruleDeviceId, 'r2');
+assert(sm.getDevicesWithRules().length === 0, 'no devices with rules after removing all');
+
+// Test 20: SMTP конфигурация через updateSiteInfo
+sm.updateSiteInfo({ smtp: { host: 'smtp.example.com', port: 587, secure: true } });
+const siteWithSmtp = sm.getSite();
+assert(siteWithSmtp.smtp.host === 'smtp.example.com', 'smtp host saved');
+assert(siteWithSmtp.smtp.port === 587, 'smtp port saved');
+assert(siteWithSmtp.smtp.secure === true, 'smtp secure saved');
+
 // Cleanup
 fs.rmSync(testDir, { recursive: true });
 console.log('\nAll tests passed!');
