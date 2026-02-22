@@ -393,13 +393,14 @@ async function test9_getStatus() {
     let status = watcher.getStatus();
     assert(status.running === false, 'Test9: not running');
     assert(status.lastCheck === null, 'Test9: lastCheck is null before first check');
-    assert(status.activeAlerts === 0, 'Test9: 0 active alerts initially');
+    assert(Array.isArray(status.activeAlerts) && status.activeAlerts.length === 0, 'Test9: 0 active alerts initially');
 
     await watcher.check();
 
     status = watcher.getStatus();
     assert(status.lastCheck instanceof Date, 'Test9: lastCheck is Date after check');
-    assert(status.activeAlerts === 1, 'Test9: 1 active alert after incident');
+    assert(Array.isArray(status.activeAlerts) && status.activeAlerts.length === 1, 'Test9: 1 active alert after incident');
+    assert(status.activeAlerts[0] === 'DEV1_coolStatus', 'Test9: active alert key correct');
 }
 
 // ============================================================

@@ -1049,6 +1049,26 @@
                         </div>
                     </div>
                     <button class="btn btn-primary" onclick="saveSiteInfo()">Save Site Info</button>
+
+                    <h3 style="margin-top: 1.5rem;">SMTP Settings</h3>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1rem;">
+                        <div>
+                            <label class="field-label">SMTP Host</label>
+                            <input type="text" id="smtp-host" class="text-input" placeholder="e.g. mail.customer.kz">
+                        </div>
+                        <div>
+                            <label class="field-label">Port</label>
+                            <input type="number" id="smtp-port" class="text-input" value="25" min="1" max="65535" style="width: 100px;">
+                        </div>
+                        <div>
+                            <label class="field-label">Secure (TLS)</label>
+                            <select id="smtp-secure" class="text-input" style="width: 100px;">
+                                <option value="false" selected>No</option>
+                                <option value="true">Yes</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="saveSiteInfo()">Save SMTP</button>
                 </div>
 
                 <div class="settings-card" style="max-width: 1000px; margin-top: 1rem;">
@@ -1152,6 +1172,33 @@
                             <div id="calc-snap-verdict" style="margin-top: 0.25rem; font-size: 0.85rem; font-weight: 500;"></div>
                         </div>
                     </div>
+                </div>
+
+                <div class="settings-card" style="max-width: 1000px; margin-top: 1rem;">
+                    <h3>Watcher Rules</h3>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1rem;">
+                        Define alert rules per device. Watcher checks InfluxDB every 30 sec and triggers snapshots on incidents.
+                    </p>
+                    <div id="watcher-rules-container"></div>
+                </div>
+
+                <div class="settings-card" style="max-width: 1000px; margin-top: 1rem;">
+                    <h3>Watcher Control</h3>
+                    <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                        <div id="watcher-status-indicator" style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span id="watcher-status-dot" style="width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; display: inline-block;"></span>
+                            <span id="watcher-status-text" style="font-weight: 500;">Stopped</span>
+                        </div>
+                        <button class="btn btn-primary" id="watcher-start-btn" onclick="startWatcher()">Start</button>
+                        <button class="btn" id="watcher-stop-btn" onclick="stopWatcher()" style="color: #ef4444;" disabled>Stop</button>
+                    </div>
+                    <div id="watcher-last-check" style="font-size: 0.85rem; color: var(--text-muted);"></div>
+                    <div id="watcher-active-alerts" style="margin-top: 0.5rem;"></div>
+                </div>
+
+                <div class="settings-card" style="max-width: 1000px; margin-top: 1rem;">
+                    <h3>Snapshots</h3>
+                    <div id="snapshots-list" style="font-size: 0.9rem; color: var(--text-muted);">Loading...</div>
                 </div>
             </div>
 
@@ -2078,6 +2125,12 @@
                 document.getElementById('site-name').value = siteData.site.name || '';
                 document.getElementById('site-contact').value = siteData.site.contact || '';
 
+                // SMTP
+                const smtp = siteData.site.smtp || {};
+                document.getElementById('smtp-host').value = smtp.host || '';
+                document.getElementById('smtp-port').value = smtp.port || 25;
+                document.getElementById('smtp-secure').value = smtp.secure ? 'true' : 'false';
+
                 // Polling
                 document.getElementById('polling-interval').value = siteData.polling.interval || 5;
                 document.getElementById('polling-snapshot-window').value = siteData.polling.snapshotWindow || 48;
@@ -2118,14 +2171,27 @@
                 document.getElementById('calc-interval').value = siteData.polling.interval || 5;
                 document.getElementById('calc-snapshot').value = siteData.polling.snapshotWindow || 48;
                 updateCalculator();
+
+                // Watcher
+                renderWatcherRules();
+                loadWatcherStatus();
+                loadSnapshots();
             }
 
             async function saveSiteInfo() {
+                const smtpHost = document.getElementById('smtp-host').value.trim();
                 const body = {
                     id: document.getElementById('site-id').value.trim(),
                     name: document.getElementById('site-name').value.trim(),
                     contact: document.getElementById('site-contact').value.trim()
                 };
+                if (smtpHost) {
+                    body.smtp = {
+                        host: smtpHost,
+                        port: parseInt(document.getElementById('smtp-port').value) || 25,
+                        secure: document.getElementById('smtp-secure').value === 'true'
+                    };
+                }
                 try {
                     const res = await fetch('/api/site/info', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
                     const data = await res.json();
@@ -2219,6 +2285,236 @@
                     verdict.style.color = '#dc2626';
                 }
             }
+
+            // ==================== Watcher Rules ====================
+            function renderWatcherRules() {
+                const container = document.getElementById('watcher-rules-container');
+                if (!siteData || !siteData.devices || siteData.devices.length === 0) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">No devices configured. Add devices first.</p>';
+                    return;
+                }
+
+                let html = '';
+                siteData.devices.forEach(dev => {
+                    const rules = dev.rules || [];
+                    html += `<div style="margin-bottom: 1.5rem; border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">`;
+                    html += `<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">`;
+                    html += `<strong style="font-family: monospace;">${dev.device_sn}</strong>`;
+                    html += `<span style="color: var(--text-muted); font-size: 0.85rem;">${dev.model} | ${dev.type} | ${dev.room}</span>`;
+                    html += `</div>`;
+
+                    if (rules.length > 0) {
+                        html += `<table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-bottom: 0.5rem;">`;
+                        html += `<thead><tr style="text-align: left; border-bottom: 1px solid var(--border);">`;
+                        html += `<th style="padding: 0.4rem;">ID</th>`;
+                        html += `<th style="padding: 0.4rem;">Metric</th>`;
+                        html += `<th style="padding: 0.4rem;">Type</th>`;
+                        html += `<th style="padding: 0.4rem;">Condition</th>`;
+                        html += `<th style="padding: 0.4rem;">Severity</th>`;
+                        html += `<th style="padding: 0.4rem; width: 60px;"></th>`;
+                        html += `</tr></thead><tbody>`;
+                        rules.forEach(r => {
+                            let condition = '';
+                            if (r.type === 'discrete') {
+                                condition = 'alert_on: [' + (r.alert_on || []).join(', ') + ']';
+                            } else if (r.type === 'threshold') {
+                                const parts = [];
+                                if (r.min !== undefined) parts.push('min: ' + r.min);
+                                if (r.max !== undefined) parts.push('max: ' + r.max);
+                                condition = parts.join(', ');
+                            }
+                            const sevColor = r.severity === 'critical' ? '#ef4444' : '#d97706';
+                            html += `<tr style="border-bottom: 1px solid var(--border);">`;
+                            html += `<td style="padding: 0.4rem; font-family: monospace;">${r.id}</td>`;
+                            html += `<td style="padding: 0.4rem;">${r.metric}</td>`;
+                            html += `<td style="padding: 0.4rem;">${r.type}</td>`;
+                            html += `<td style="padding: 0.4rem; font-family: monospace; font-size: 0.8rem;">${condition}</td>`;
+                            html += `<td style="padding: 0.4rem; color: ${sevColor}; font-weight: 500;">${r.severity}</td>`;
+                            html += `<td style="padding: 0.4rem;"><button class="btn" style="font-size: 0.7rem; padding: 0.2rem 0.4rem; color: #ef4444;" onclick="removeRule('${dev.id}', '${r.id}')">x</button></td>`;
+                            html += `</tr>`;
+                        });
+                        html += `</tbody></table>`;
+                    }
+
+                    // Add Rule form
+                    const formId = 'rule-form-' + dev.id.replace(/[^a-z0-9]/gi, '_');
+                    html += `<div id="${formId}" style="display: flex; gap: 0.4rem; align-items: end; flex-wrap: wrap; font-size: 0.85rem;">`;
+                    html += `<div><label class="field-label" style="font-size: 0.75rem;">Metric</label>`;
+                    html += `<input type="text" class="text-input" id="${formId}-metric" placeholder="e.g. coolOutput" style="width: 130px; font-size: 0.85rem;"></div>`;
+                    html += `<div><label class="field-label" style="font-size: 0.75rem;">Type</label>`;
+                    html += `<select class="text-input" id="${formId}-type" style="width: 100px; font-size: 0.85rem;" onchange="toggleRuleFields('${formId}')">`;
+                    html += `<option value="discrete">discrete</option><option value="threshold">threshold</option></select></div>`;
+                    html += `<div class="rule-discrete-fields" id="${formId}-discrete"><label class="field-label" style="font-size: 0.75rem;">Alert On</label>`;
+                    html += `<input type="text" class="text-input" id="${formId}-alert-on" placeholder="e.g. 1,2" style="width: 80px; font-size: 0.85rem;"></div>`;
+                    html += `<div class="rule-threshold-fields" id="${formId}-threshold" style="display: none;">`;
+                    html += `<label class="field-label" style="font-size: 0.75rem;">Min / Max</label>`;
+                    html += `<div style="display: flex; gap: 0.3rem;">`;
+                    html += `<input type="number" class="text-input" id="${formId}-min" placeholder="min" style="width: 60px; font-size: 0.85rem;">`;
+                    html += `<input type="number" class="text-input" id="${formId}-max" placeholder="max" style="width: 60px; font-size: 0.85rem;">`;
+                    html += `</div></div>`;
+                    html += `<div><label class="field-label" style="font-size: 0.75rem;">Severity</label>`;
+                    html += `<select class="text-input" id="${formId}-severity" style="width: 90px; font-size: 0.85rem;">`;
+                    html += `<option value="warning">warning</option><option value="critical">critical</option></select></div>`;
+                    html += `<div><label class="field-label" style="font-size: 0.75rem;">Description</label>`;
+                    html += `<input type="text" class="text-input" id="${formId}-desc" placeholder="Human-readable" style="width: 160px; font-size: 0.85rem;"></div>`;
+                    html += `<button class="btn" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;" onclick="addRule('${dev.id}', '${formId}')">+ Add</button>`;
+                    html += `</div>`;
+
+                    html += `</div>`;
+                });
+                container.innerHTML = html;
+            }
+
+            function toggleRuleFields(formId) {
+                const type = document.getElementById(formId + '-type').value;
+                document.getElementById(formId + '-discrete').style.display = type === 'discrete' ? '' : 'none';
+                document.getElementById(formId + '-threshold').style.display = type === 'threshold' ? '' : 'none';
+            }
+
+            async function addRule(deviceId, formId) {
+                const metric = document.getElementById(formId + '-metric').value.trim();
+                const type = document.getElementById(formId + '-type').value;
+                const severity = document.getElementById(formId + '-severity').value;
+                const description = document.getElementById(formId + '-desc').value.trim();
+
+                if (!metric) return alert('Metric name is required');
+
+                // Auto-generate rule id
+                const existingDevice = siteData.devices.find(d => d.id === deviceId);
+                const existingRules = (existingDevice && existingDevice.rules) || [];
+                const ruleId = 'r' + (existingRules.length + 1);
+
+                const rule = { id: ruleId, metric, type, severity, description: description || metric };
+
+                if (type === 'discrete') {
+                    const alertOnStr = document.getElementById(formId + '-alert-on').value.trim();
+                    if (!alertOnStr) return alert('Alert On values required for discrete type');
+                    rule.alert_on = alertOnStr.split(',').map(v => {
+                        const n = Number(v.trim());
+                        return isNaN(n) ? v.trim() : n;
+                    });
+                } else {
+                    const minVal = document.getElementById(formId + '-min').value;
+                    const maxVal = document.getElementById(formId + '-max').value;
+                    if (!minVal && !maxVal) return alert('At least min or max required for threshold type');
+                    if (minVal) rule.min = parseFloat(minVal);
+                    if (maxVal) rule.max = parseFloat(maxVal);
+                }
+
+                try {
+                    const res = await fetch('/api/site/devices/' + deviceId + '/rules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(rule)
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        loadSiteData();
+                    } else {
+                        alert(data.error);
+                    }
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            async function removeRule(deviceId, ruleId) {
+                if (!confirm('Remove rule ' + ruleId + '?')) return;
+                try {
+                    const res = await fetch('/api/site/devices/' + deviceId + '/rules/' + ruleId, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (res.ok) loadSiteData();
+                    else alert(data.error);
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            // ==================== Watcher Control ====================
+            async function loadWatcherStatus() {
+                try {
+                    const res = await fetch('/api/watcher/status');
+                    const status = await res.json();
+
+                    const dot = document.getElementById('watcher-status-dot');
+                    const text = document.getElementById('watcher-status-text');
+                    const startBtn = document.getElementById('watcher-start-btn');
+                    const stopBtn = document.getElementById('watcher-stop-btn');
+                    const lastCheck = document.getElementById('watcher-last-check');
+                    const alerts = document.getElementById('watcher-active-alerts');
+
+                    if (status.running) {
+                        dot.style.background = '#16a34a';
+                        text.textContent = 'Running';
+                        text.style.color = '#16a34a';
+                        startBtn.disabled = true;
+                        stopBtn.disabled = false;
+                    } else {
+                        dot.style.background = '#9ca3af';
+                        text.textContent = 'Stopped';
+                        text.style.color = '';
+                        startBtn.disabled = false;
+                        stopBtn.disabled = true;
+                    }
+
+                    if (status.lastCheck) {
+                        lastCheck.textContent = 'Last check: ' + new Date(status.lastCheck).toLocaleString();
+                    } else {
+                        lastCheck.textContent = '';
+                    }
+
+                    if (status.activeAlerts && status.activeAlerts.length > 0) {
+                        alerts.innerHTML = '<strong style="color: #ef4444;">Active alerts:</strong> ' +
+                            status.activeAlerts.map(a => '<span style="font-family: monospace; background: #fef2f2; color: #dc2626; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.8rem;">' + a + '</span>').join(' ');
+                    } else {
+                        alerts.innerHTML = '';
+                    }
+                } catch (e) {
+                    console.error('Failed to load watcher status:', e);
+                }
+            }
+
+            async function startWatcher() {
+                try {
+                    await fetch('/api/watcher/start', { method: 'POST' });
+                    loadWatcherStatus();
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            async function stopWatcher() {
+                try {
+                    await fetch('/api/watcher/stop', { method: 'POST' });
+                    loadWatcherStatus();
+                } catch (e) { alert('Error: ' + e.message); }
+            }
+
+            // ==================== Snapshots ====================
+            async function loadSnapshots() {
+                const container = document.getElementById('snapshots-list');
+                try {
+                    const res = await fetch('/api/snapshots');
+                    const files = await res.json();
+                    if (files.length === 0) {
+                        container.innerHTML = '<p style="font-style: italic;">No snapshots yet.</p>';
+                        return;
+                    }
+                    let html = '<ul style="list-style: none; padding: 0; margin: 0;">';
+                    files.forEach(f => {
+                        html += `<li style="padding: 0.4rem 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">`;
+                        html += `<span style="font-family: monospace; font-size: 0.85rem;">${f}</span>`;
+                        html += `<a href="/api/snapshots/${encodeURIComponent(f)}" class="btn" style="font-size: 0.75rem; padding: 0.2rem 0.5rem; text-decoration: none;">Download</a>`;
+                        html += `</li>`;
+                    });
+                    html += '</ul>';
+                    container.innerHTML = html;
+                } catch (e) {
+                    container.innerHTML = '<p style="color: #ef4444;">Failed to load snapshots</p>';
+                }
+            }
+
+            // Auto-refresh watcher status every 10 seconds
+            setInterval(() => {
+                if (document.getElementById('site-tab').classList.contains('active') ||
+                    document.getElementById('site-tab').style.display !== 'none') {
+                    loadWatcherStatus();
+                }
+            }, 10000);
 
             // Load site data on page load
             loadSiteData();
