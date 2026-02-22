@@ -40,10 +40,17 @@ BKNS-сервер устанавливается локально в дата-ц
 - Таб Site Setup с калькулятором размеров хранилища и слепков
 - Автоматическая регистрация устройств в site.json при сохранении Telegraf конфига
 - Path traversal защита в `/api/telegraf/save`
+- **Watcher** — детекция инцидентов (discrete/threshold правила, state machine ok→alert)
+- **Snapshot Generator** — tar.gz слепки (meta.json + data.lp) при инцидентах, скоуп: комната
+- **Email Notifier** — nodemailer через локальный SMTP, вложение snapshot
+- **Watcher Rules UI** — управление правилами, контроль watcher, список слепков
 
-**Ещё не реализовано**: Watcher (детекция инцидентов), генерация слепков, email-оповещения, центральный сервер анализа.
+**Ещё не реализовано**: центральный сервер анализа слепков.
 
-**Дизайн-документы**: `docs/plans/2026-02-22-multi-device-snapshot-design.md`
+**Дизайн-документы**:
+- `docs/plans/2026-02-22-multi-device-snapshot-design.md`
+- `docs/plans/2026-02-22-watcher-design.md`
+- `docs/plans/2026-02-22-watcher-implementation.md`
 
 ## Структура проекта
 
@@ -58,14 +65,23 @@ bkns-snmp/
 │   ├── mibs/                 # Загруженные MIB-файлы
 │   ├── telegraf.d/           # Сгенерированные конфиги Telegraf
 │   ├── lib/site-manager.js   # CRUD site.json, миграция из settings.json
-│   ├── site.json             # Реестр площадки (devices, rooms, polling)
+│   ├── lib/watcher.js        # Watcher — детекция инцидентов (discrete/threshold)
+│   ├── lib/influx-client.js  # InfluxDB v2 Flux API клиент + CSV парсер
+│   ├── lib/snapshot.js       # Генерация tar.gz слепков (meta.json + data.lp)
+│   ├── lib/notifier.js       # Email уведомления через nodemailer
+│   ├── site.json             # Реестр площадки (devices, rooms, polling, rules)
 │   ├── settings.json         # Legacy настройки (мигрируется в site.json)
 │   ├── Dockerfile            # Node.js 20 + Telegraf + snmp-mibs-downloader
 │   ├── Dockerfile.telegraf   # Telegraf с MIB-ами (не используется в compose)
 │   ├── docker-compose.yml    # snmp-viewer + InfluxDB 2.7 + Grafana
 │   ├── test-mib.js           # Тест MIB-менеджера
 │   ├── test-parsing.js       # Тест парсинга MIB
-│   ├── test-site-manager.js  # Тесты SiteManager (12 тестов)
+│   ├── test-site-manager.js  # Тесты SiteManager (35 assertions)
+│   ├── test-watcher.js       # Тесты Watcher (33 assertions)
+│   ├── test-influx-client.js # Тесты InfluxDB Client (47 assertions)
+│   ├── test-snapshot.js      # Тесты Snapshot Generator (31 assertions)
+│   ├── test-notifier.js      # Тесты Notifier (13 assertions)
+│   ├── snapshots/            # Сгенерированные слепки (.tar.gz)
 │   └── package.json
 ├── snmp_results/             # Сохранённые результаты SNMP-сканов (txt, xml)
 └── tomls/                    # Готовые Telegraf конфиги устройств
@@ -74,7 +90,7 @@ bkns-snmp/
 
 ## Стек
 
-- **Backend**: Node.js 20, Express 4, net-snmp 3.8, multer 2
+- **Backend**: Node.js 20, Express 4, net-snmp 3.8, multer 2, nodemailer 8, tar-stream 3
 - **Frontend**: Vanilla HTML/CSS/JS (single-page, Inter font, CSS variables)
 - **Инфраструктура**: Docker Compose (snmp-viewer:3000, InfluxDB:8086, Grafana:3001)
 - **Мониторинг**: Telegraf → InfluxDB v2 → Grafana
@@ -113,6 +129,13 @@ docker compose up -d --build   # Полный стек
 | DELETE | `/api/site/devices/:id` | Удалить устройство |
 | PUT | `/api/site/polling` | Обновить polling настройки |
 | POST | `/api/calculator` | Расчёт размеров хранилища и слепков |
+| POST | `/api/site/devices/:id/rules` | Добавить правило к устройству |
+| DELETE | `/api/site/devices/:id/rules/:ruleId` | Удалить правило |
+| POST | `/api/watcher/start` | Запустить Watcher |
+| POST | `/api/watcher/stop` | Остановить Watcher |
+| GET | `/api/watcher/status` | Статус Watcher (running, lastCheck, activeAlerts) |
+| GET | `/api/snapshots` | Список слепков |
+| GET | `/api/snapshots/:filename` | Скачать слепок |
 | GET | `/api/equipment` | Список оборудования из telegraf.d и settings |
 | POST | `/api/equipment/status` | Проверка онлайн-статуса по IP (sysUpTime) |
 | POST | `/api/telegraf/save` | Сохранить конфиг Telegraf |
@@ -134,11 +157,36 @@ docker compose up -d --build   # Полный стек
 - Системные MIB-пути: `/usr/share/snmp/mibs`, `/var/lib/mibs/ietf`, `/var/lib/mibs/iana`
 
 ### SiteManager (lib/site-manager.js)
-- CRUD для site.json: площадка (id, name, contact), комнаты, устройства, polling
+- CRUD для site.json: площадка (id, name, contact, smtp), комнаты, устройства, polling
+- Управление правилами: `addRule()`, `removeRule()`, `getDevicesWithRules()`
 - Автоматическая миграция из legacy `settings.json`
-- Валидация: interval ∈ {1, 5, 10}, уникальность room/device id
+- Валидация: interval ∈ {1, 5, 10}, уникальность room/device/rule id
 - Защита: нельзя удалить комнату с привязанными устройствами
 - Генерация device id: `${type}_${sn_lowercase}`, config_file: `device_${sn}.conf`
+
+### Watcher (lib/watcher.js)
+- Детекция инцидентов через setInterval (по умолчанию 30 сек)
+- Читает правила из site.json, запрашивает InfluxDB
+- Два типа: discrete (alert_on) и threshold (min/max)
+- State machine: ok→alert = incident, alert→alert = ignore, alert→ok = recovery
+- EventEmitter: emits 'incident' с device_sn, measurement, room, rule, value
+
+### InfluxClient (lib/influx-client.js)
+- Обёртка для InfluxDB v2 Flux API через HTTP
+- `buildLastValuesQuery(measurement)` — последние значения, pivot по device_sn
+- `buildRangeQuery(deviceSNs, hours)` — данные за период для слепков
+- `parseCSV(csv)` — парсинг InfluxDB annotated CSV
+
+### SnapshotGenerator (lib/snapshot.js)
+- Генерация tar.gz слепков при инциденте
+- Скоуп: все устройства той же комнаты (не весь сайт)
+- Формат: meta.json (инцидент, устройства, период) + data.lp (raw CSV от InfluxDB)
+- Файлы: `snapshots/snapshot_{siteId}_{timestamp}.tar.gz`
+
+### Notifier (lib/notifier.js)
+- Email через nodemailer (локальный SMTP, без авторизации для MVP)
+- Тема: `[BKNS] {SEVERITY}: {device_sn} — {description}`
+- Вложение: snapshot tar.gz
 
 ### processToTables (server.js:565)
 - Эвристическая группировка OID в таблицы
@@ -146,6 +194,10 @@ docker compose up -d --build   # Полный стек
 
 ### Frontend (public/index.html)
 - SPA с табами: Site Setup, Dashboard, Scan, Config, MIBs, Telegraf
+- Site Setup: site info, SMTP, rooms, devices, polling, storage calculator
+- Watcher Rules UI: таблицы правил per device, inline add/remove
+- Watcher Control: статус (running/stopped), Start/Stop, active alerts
+- Snapshots: список с download-ссылками
 - Поддержка i18n (en/kk)
 - MIB Browser (дерево OID с поиском)
 - Генерация Telegraf TOML из UI

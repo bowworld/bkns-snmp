@@ -11,6 +11,7 @@ services:
       - ./server.js:/usr/src/app/server.js
       - ./settings.json:/usr/src/app/settings.json
       - ../tomls:/usr/src/app/telegraf.d
+      - ./snapshots:/usr/src/app/snapshots
     restart: unless-stopped
     depends_on:
       - influxdb

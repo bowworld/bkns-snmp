@@ -3,3 +3,4 @@ node_modules/
 snmp-viewer/
 site.json
 telegraf.d/
+snapshots/

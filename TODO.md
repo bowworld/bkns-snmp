@@ -18,18 +18,25 @@
   - Формат слепка спроектирован: tar.gz (meta.json + data.lp в InfluxDB Line Protocol)
   - Дизайн-документ: `docs/plans/2026-02-22-multi-device-snapshot-design.md`
 
-- [ ] **3. Реализовать детекцию инцидентов**
-  - Наблюдение за изменением дискретных значений (online → offline)
-  - Пороги для числовых значений (температура выше нормы)
-  - Правила: когда именно считать ситуацию инцидентом
+- [x] **3. Реализовать детекцию инцидентов** ✅
+  - Watcher (`lib/watcher.js`) — setInterval проверка InfluxDB каждые 30 сек
+  - Два типа правил: discrete (alert_on) и threshold (min/max)
+  - State machine: ok→alert = инцидент, alert→alert = ignore, alert→ok = recovery
+  - Правила хранятся в site.json при устройстве (поле `rules`)
+  - Дизайн: `docs/plans/2026-02-22-watcher-design.md`
+  - Тесты: 33 assertions (`test-watcher.js`)
 
-- [ ] **4. Генерация слепков (snapshots)**
-  - При срабатывании правила — сформировать файл-слепок
-  - Содержимое: текущее состояние + time series между предыдущим и текущим слепком
+- [x] **4. Генерация слепков (snapshots)** ✅
+  - SnapshotGenerator (`lib/snapshot.js`) — tar.gz (meta.json + data.lp)
+  - Скоуп слепка: все устройства той же комнаты
+  - InfluxDB Client (`lib/influx-client.js`) — Flux запросы, CSV парсер
+  - Тесты: 78 assertions (`test-snapshot.js`, `test-influx-client.js`)
 
-- [ ] **5. Оповещения**
-  - Email ответственному представителю заказчика
-  - Письмо: описание инцидента + файл слепка во вложении
+- [x] **5. Оповещения** ✅
+  - Notifier (`lib/notifier.js`) — nodemailer, локальный SMTP
+  - Email: тема с severity и device_sn, тело с деталями, вложение snapshot
+  - SMTP конфигурация в site.json (site.smtp: host, port, secure)
+  - Тесты: 13 assertions (`test-notifier.js`)
 
 ## Качество кода
 
@@ -48,4 +55,8 @@
 
 - [ ] **10. Автоматические тесты**
   - Хотя бы для MibManager и processToTables
-  - ✅ SiteManager — 12 тестов (`test-site-manager.js`)
+  - ✅ SiteManager — 35 assertions (`test-site-manager.js`)
+  - ✅ Watcher — 33 assertions (`test-watcher.js`)
+  - ✅ InfluxDB Client — 47 assertions (`test-influx-client.js`)
+  - ✅ Snapshot Generator — 31 assertions (`test-snapshot.js`)
+  - ✅ Notifier — 13 assertions (`test-notifier.js`)
