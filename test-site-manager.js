@@ -172,9 +172,9 @@ assert(sm.getDevicesWithRules().length === 0, 'no devices with rules after remov
 // Test 20: SMTP конфигурация через updateSiteInfo
 sm.updateSiteInfo({ smtp: { host: 'smtp.example.com', port: 587, secure: true } });
 const siteWithSmtp = sm.getSite();
-assert(siteWithSmtp.smtp.host === 'smtp.example.com', 'smtp host saved');
-assert(siteWithSmtp.smtp.port === 587, 'smtp port saved');
-assert(siteWithSmtp.smtp.secure === true, 'smtp secure saved');
+assert(siteWithSmtp.site.smtp.host === 'smtp.example.com', 'smtp host saved');
+assert(siteWithSmtp.site.smtp.port === 587, 'smtp port saved');
+assert(siteWithSmtp.site.smtp.secure === true, 'smtp secure saved');
 
 // Cleanup
 fs.rmSync(testDir, { recursive: true });
